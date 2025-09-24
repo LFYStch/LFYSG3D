@@ -252,7 +252,7 @@ class AABB {
     AABB hitbox;
     double theta, phi, cx, cy, cz;
 
-    public GameObject(mesh[] anims, AABB hitbox, double theta, double phi, double cx, double cy, double cz) {
+    public GameObject(mesh[] anims, AABB hitbox, double theta, double phi, vec3 pP) {
         this.anims = anims;
         this.hitbox = hitbox;
         this.theta = theta; // Y-axis rotation
@@ -269,22 +269,37 @@ class AABB {
             for (tri t : row) {
                 for (vec3 v : new vec3[]{t.v1, t.v2, t.v3}) {
                     // Translate to origin
-                    double x = v.x - cx;
-                    double y = v.y - cy;
-                    double z = v.z - cz;
+                    double x = v.x - pP.x;
+                    
+                    double z = v.z - pP.z;
 
                     // Y-axis rotation (around vertical axis)
                     double x1 = x * Math.cos(theta) - z * Math.sin(theta);
                     double z1 = x * Math.sin(theta) + z * Math.cos(theta);
 
-                    // Z-axis rotation (around forward axis)
-                    double x2 = x1 * Math.cos(phi) - y * Math.sin(phi);
-                    double y2 = x1 * Math.sin(phi) + y * Math.cos(phi);
+                    // Translate back
+                    v.x = x2 + pP.x;
+                    
+                    v.z = z1 + pP.z;
+                }
+            }
+        }
+         for (tri[] row : lfys.tris) {
+            for (tri t : row) {
+                for (vec3 v : new vec3[]{t.v1, t.v2, t.v3}) {
+                    // Translate to origin
+                    double x = v.x - pP.x;
+                    
+                    double y = v.y - pP.y;
+
+                    // Y-axis rotation (around vertical axis)
+                    double x1 = x * Math.cos(psi) - y * Math.sin(psi);
+                    double y1 = x * Math.sin(psi) + y * Math.cos(psi);
 
                     // Translate back
-                    v.x = x2 + cx;
-                    v.y = y2 + cy;
-                    v.z = z1 + cz;
+                    v.x = x2 + pP.x;
+                    
+                    v.y = y1 + pP.y;
                 }
             }
         }
