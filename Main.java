@@ -247,19 +247,18 @@ class AABB {
     }
 }
 
-  class GameObject {
+  public class GameObject {
     mesh[] anims;
     AABB hitbox;
-    double theta, phi, cx, cy, cz;
+    double theta, phi; // Rotation angles
+    vec3 pivot;        // Rotation pivot point
 
-    public GameObject(mesh[] anims, AABB hitbox, double theta, double phi, vec3 pP) {
+    public GameObject(mesh[] anims, AABB hitbox, double theta, double phi, vec3 pivot) {
         this.anims = anims;
         this.hitbox = hitbox;
-        this.theta = theta; // Y-axis rotation
-        this.phi = phi;     // Z-axis rotation
-        this.cx = cx;
-        this.cy = cy;
-        this.cz = cz;
+        this.theta = theta;
+        this.phi = phi;
+        this.pivot = pivot;
     }
 
     public mesh getMesh(int AnimIndex) {
@@ -268,38 +267,23 @@ class AABB {
         for (tri[] row : lfys.tris) {
             for (tri t : row) {
                 for (vec3 v : new vec3[]{t.v1, t.v2, t.v3}) {
-                    // Translate to origin
-                    double x = v.x - pP.x;
-                    
-                    double z = v.z - pP.z;
+                    // Translate to pivot
+                    double x = v.x - pivot.x;
+                    double y = v.y - pivot.y;
+                    double z = v.z - pivot.z;
 
-                    // Y-axis rotation (around vertical axis)
+                    // Y-axis rotation
                     double x1 = x * Math.cos(theta) - z * Math.sin(theta);
                     double z1 = x * Math.sin(theta) + z * Math.cos(theta);
 
-                    // Translate back
-                    v.x = x2 + pP.x;
-                    
-                    v.z = z1 + pP.z;
-                }
-            }
-        }
-         for (tri[] row : lfys.tris) {
-            for (tri t : row) {
-                for (vec3 v : new vec3[]{t.v1, t.v2, t.v3}) {
-                    // Translate to origin
-                    double x = v.x - pP.x;
-                    
-                    double y = v.y - pP.y;
-
-                    // Y-axis rotation (around vertical axis)
-                    double x1 = x * Math.cos(psi) - y * Math.sin(psi);
-                    double y1 = x * Math.sin(psi) + y * Math.cos(psi);
+                    // Z-axis rotation
+                    double x2 = x1 * Math.cos(phi) - y * Math.sin(phi);
+                    double y2 = x1 * Math.sin(phi) + y * Math.cos(phi);
 
                     // Translate back
-                    v.x = x2 + pP.x;
-                    
-                    v.y = y1 + pP.y;
+                    v.x = x2 + pivot.x;
+                    v.y = y2 + pivot.y;
+                    v.z = z1 + pivot.z;
                 }
             }
         }
