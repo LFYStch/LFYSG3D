@@ -295,12 +295,11 @@ class AABB {
 
 
 class Objloader {
-    public mesh load(String path, double offsetX, double offsetY, double offsetZ) {
+    public mesh load(String path, double offsetX, double offsetY, double offsetZ, double scale) {
         java.util.List<vec3> vertices = new java.util.ArrayList<>();
         java.util.List<vec2> uvs = new java.util.ArrayList<>();
-        java.util.List<tri> triangles = new java.util.ArrayList<>();
         java.util.List<vec3> normals = new java.util.ArrayList<>();
-
+        java.util.List<tri> triangles = new java.util.ArrayList<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(path))) {
             String line;
@@ -313,7 +312,7 @@ class Objloader {
                         double x = Double.parseDouble(parts[1]) + offsetX;
                         double y = Double.parseDouble(parts[2]) + offsetY;
                         double z = Double.parseDouble(parts[3]) + offsetZ;
-                        vertices.add(new vec3(x, y, z, 0, 0));
+                        vertices.add(new vec3(x * scale, y * scale, z * scale, 0, 0));
                         break;
                     }
 
@@ -324,37 +323,44 @@ class Objloader {
                         break;
                     }
 
-                    case "f": {
-                        String[] tokens = parts[i + 1].split("/");
-                        int vIdx = Integer.parseInt(tokens[0]) - 1;
-                        int uvIdx = tokens.length > 1 ? Integer.parseInt(tokens[1]) - 1 : 0;
-                        int nIdx = tokens.length > 2 ? Integer.parseInt(tokens[2]) - 1 : -1;
-                        
-                        vec3 base = vertices.get(vIdx);
-                        vec3 copy = base.copy();
-                        
-                        if (!uvs.isEmpty()) {
-                            vec2 uv = uvs.get(uvIdx);
-                            copy.u = uv.x;
-                            copy.v = uv.y;
-                        }
-                        
-                        if (nIdx >= 0 && nIdx < normals.size()) {
-                            vec3 normal = normals.get(nIdx);
-                            copy.nx = normal.x;
-                            copy.ny = normal.y;
-                            copy.nz = normal.z;
-                        }
-
-                    }
                     case "vn": {
                         double nx = Double.parseDouble(parts[1]);
                         double ny = Double.parseDouble(parts[2]);
                         double nz = Double.parseDouble(parts[3]);
-                        normals.add(new vec3(nx, ny, nz, 0, 0)); // Only using x,y,z for normal
+                        normals.add(new vec3(nx, ny, nz, 0, 0)); // Only x,y,z used for normal
                         break;
                     }
 
+                    case "f": {
+                        vec3[] faceVerts = new vec3[3];
+                        for (int i = 0; i < 3; i++) {
+                            String[] tokens = parts[i + 1].split("/");
+                            int vIdx = Integer.parseInt(tokens[0]) - 1;
+                            int uvIdx = tokens.length > 1 && !tokens[1].isEmpty() ? Integer.parseInt(tokens[1]) - 1 : -1;
+                            int nIdx = tokens.length > 2 && !tokens[2].isEmpty() ? Integer.parseInt(tokens[2]) - 1 : -1;
+
+                            vec3 base = vertices.get(vIdx);
+                            vec3 copy = base.copy();
+
+                            if (uvIdx >= 0 && uvIdx < uvs.size()) {
+                                vec2 uv = uvs.get(uvIdx);
+                                copy.u = uv.x;
+                                copy.v = uv.y;
+                            }
+
+                            if (nIdx >= 0 && nIdx < normals.size()) {
+                                vec3 normal = normals.get(nIdx);
+                                copy.nx = normal.x;
+                                copy.ny = normal.y;
+                                copy.nz = normal.z;
+                            }
+
+                            faceVerts[i] = copy;
+                        }
+
+                        triangles.add(new tri(faceVerts[0], faceVerts[1], faceVerts[2]));
+                        break;
+                    }
                 }
             }
         } catch (IOException e) {
