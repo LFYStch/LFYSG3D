@@ -1,0 +1,4 @@
+clear
+javac Main.java
+echo "Made with LFYSG3D"
+java Main
