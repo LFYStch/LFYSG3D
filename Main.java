@@ -224,7 +224,7 @@ class spawner {
     public mesh LFYS(double x, double y, double z, int aI, double theta, double psi) {
     
     GameObject LFYS = new GameObject(new mesh[]{
-        loader.load("Cube.obj",x,y,z)
+        loader.load("Cube.obj",x,y,z,10)
     }, new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), theta, psi, x, y, z);
     return LFYS.getMesh(aI);
 }
