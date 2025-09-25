@@ -225,7 +225,7 @@ class spawner {
     
     GameObject LFYS = new GameObject(new mesh[]{
         loader.load("Cube.obj",x,y,z,10)
-    }, new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), theta, psi, x, y, z);
+    }, new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), theta, psi, new vec3(x,y,z,0,0);
     return LFYS.getMesh(aI);
 }
 
@@ -247,7 +247,7 @@ class AABB {
     }
 }
 
-  public class GameObject {
+class GameObject {
     mesh[] anims;
     AABB hitbox;
     double theta, phi; // Rotation angles
