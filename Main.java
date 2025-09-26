@@ -48,16 +48,16 @@ class dP extends JPanel {
             e.printStackTrace();
         }
     }
-
+    //Main drawloop starts here! :)
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
-        g2d.setColor(Color.BLACK);
+        g2d.setColor(Color.BLUE);
         g2d.fillRect(0, 0, getWidth(), getHeight());
         drawMesh(sp.LFYS(0,0,1,0,i,i),g2d,texture1);
     }
-
+    //No edits past here! >:(
     public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
