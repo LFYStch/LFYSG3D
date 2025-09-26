@@ -41,7 +41,7 @@ class dP extends JPanel {
 
     public void loadTextures() {
         try {
-            texture1 = ImageIO.read(new File("dir.jpg"));
+            texture1 = ImageIO.read(new File("dir.png"));
             
         } catch (IOException e) {
             System.err.println("Texture load failed.");
@@ -55,21 +55,23 @@ class dP extends JPanel {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setColor(Color.BLACK);
         g2d.fillRect(0, 0, getWidth(), getHeight());
-        drawMesh(sp.LFYS(0,0,1,0,i,0),g2d,texture1);
+        drawMesh(sp.LFYS(0,0,1,0,i,i),g2d,texture1);
     }
-  public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
+
+    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
         Collections.addAll(sortedTris, strip);
     }
 
+    // Sort triangles by average Z depth (back-to-front)
     sortedTris.sort((a, b) -> {
         double za = (a.v1.z + a.v2.z + a.v3.z) / 3.0;
         double zb = (b.v1.z + b.v2.z + b.v3.z) / 3.0;
         return Double.compare(zb, za);
     });
 
-    vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Example: directional light from camera
+    vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
 
     for (tri t : sortedTris) {
         vec2 v1 = t.v1.project(cam, camYaw, camPitch);
@@ -106,7 +108,11 @@ class dP extends JPanel {
                         nz /= len;
                     }
 
-                    double intensity = Math.max(0, nx * lightDir.x + ny * lightDir.y + nz * lightDir.z);
+                    double dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
+                    float intensity;
+                    if (dot > 0.95) intensity = 1.0f;
+                    else if (dot > 0.5) intensity = 0.6f;
+                    else intensity = 0.3f;
 
                     int texX = (int)(u * texture.getWidth());
                     int texY = (int)(v * texture.getHeight());
@@ -123,15 +129,6 @@ class dP extends JPanel {
                 }
             }
         }
-
-        double avgZ = (t.v1.z + t.v2.z + t.v3.z) / 3.0;
-        if (avgZ < light_source1.z) {
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            g2d.setColor(Color.WHITE);
-            g2d.fillPolygon(xPoints, yPoints, 3);
-        }
-
-        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
     }
 }
 
@@ -139,7 +136,6 @@ private int clamp(int val) {
     return Math.max(0, Math.min(255, val));
 }
 
-    
 
 double[] computeBarycentric(double x1, double y1, double x2, double y2, double x3, double y3, int px, int py) {
     double det = (y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3);
@@ -224,8 +220,8 @@ class spawner {
     public mesh LFYS(double x, double y, double z, int aI, double theta, double psi) {
     
     GameObject LFYS = new GameObject(new mesh[]{
-        loader.load("Cube.obj",x,y,z,10)
-    }, new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), theta, psi, new vec3(x/10,y/10,z/10,0,0));
+        loader.load("Cube.obj",x,y,z)
+    }, new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), theta, psi, x, y, z);
     return LFYS.getMesh(aI);
 }
 
@@ -247,18 +243,19 @@ class AABB {
     }
 }
 
-class GameObject {
+  class GameObject {
     mesh[] anims;
     AABB hitbox;
-    double theta, phi;
-    vec3 pivot;
+    double theta, phi, cx, cy, cz;
 
-    public GameObject(mesh[] anims, AABB hitbox, double theta, double phi, vec3 pivot) {
+    public GameObject(mesh[] anims, AABB hitbox, double theta, double phi, double cx, double cy, double cz) {
         this.anims = anims;
         this.hitbox = hitbox;
-        this.theta = theta;
-        this.phi = phi;
-        this.pivot = pivot;
+        this.theta = theta; // Y-axis rotation
+        this.phi = phi;     // Z-axis rotation
+        this.cx = cx;
+        this.cy = cy;
+        this.cz = cz;
     }
 
     public mesh getMesh(int AnimIndex) {
@@ -267,19 +264,23 @@ class GameObject {
         for (tri[] row : lfys.tris) {
             for (tri t : row) {
                 for (vec3 v : new vec3[]{t.v1, t.v2, t.v3}) {
-                    double x = v.x - pivot.x;
-                    double y = v.y - pivot.y;
-                    double z = v.z - pivot.z;
+                    // Translate to origin
+                    double x = v.x - cx;
+                    double y = v.y - cy;
+                    double z = v.z - cz;
 
+                    // Y-axis rotation (around vertical axis)
                     double x1 = x * Math.cos(theta) - z * Math.sin(theta);
                     double z1 = x * Math.sin(theta) + z * Math.cos(theta);
 
+                    // Z-axis rotation (around forward axis)
                     double x2 = x1 * Math.cos(phi) - y * Math.sin(phi);
                     double y2 = x1 * Math.sin(phi) + y * Math.cos(phi);
 
-                    v.x = x2;
-                    v.y = y2;
-                    v.z = z1;
+                    // Translate back
+                    v.x = x2 + cx;
+                    v.y = y2 + cy;
+                    v.z = z1 + cz;
                 }
             }
         }
@@ -290,9 +291,10 @@ class GameObject {
 
 
 class Objloader {
-    public mesh load(String path, double offsetX, double offsetY, double offsetZ, double scale) {
+    public mesh load(String path, double offsetX, double offsetY, double offsetZ) {
         java.util.List<vec3> vertices = new java.util.ArrayList<>();
         java.util.List<vec2> uvs = new java.util.ArrayList<>();
+        java.util.List<vec3> normals = new java.util.ArrayList<>();
         java.util.List<tri> triangles = new java.util.ArrayList<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(path))) {
@@ -306,7 +308,7 @@ class Objloader {
                         double x = Double.parseDouble(parts[1]) + offsetX;
                         double y = Double.parseDouble(parts[2]) + offsetY;
                         double z = Double.parseDouble(parts[3]) + offsetZ;
-                        vertices.add(new vec3(x + scale, y + scale, z + scale, 0, 0));
+                        vertices.add(new vec3(x, y, z, 0, 0));
                         break;
                     }
 
@@ -317,20 +319,36 @@ class Objloader {
                         break;
                     }
 
+                    case "vn": {
+                        double nx = Double.parseDouble(parts[1]);
+                        double ny = Double.parseDouble(parts[2]);
+                        double nz = Double.parseDouble(parts[3]);
+                        normals.add(new vec3(nx, ny, nz, 0, 0));
+                        break;
+                    }
+
                     case "f": {
                         vec3[] faceVerts = new vec3[3];
                         for (int i = 0; i < 3; i++) {
                             String[] tokens = parts[i + 1].split("/");
                             int vIdx = Integer.parseInt(tokens[0]) - 1;
-                            int uvIdx = tokens.length > 1 ? Integer.parseInt(tokens[1]) - 1 : 0;
+                            int uvIdx = tokens.length > 1 && !tokens[1].isEmpty() ? Integer.parseInt(tokens[1]) - 1 : -1;
+                            int nIdx = tokens.length > 2 && !tokens[2].isEmpty() ? Integer.parseInt(tokens[2]) - 1 : -1;
 
                             vec3 base = vertices.get(vIdx);
                             vec3 copy = base.copy();
 
-                            if (!uvs.isEmpty()) {
+                            if (uvIdx >= 0 && uvIdx < uvs.size()) {
                                 vec2 uv = uvs.get(uvIdx);
                                 copy.u = uv.x;
                                 copy.v = uv.y;
+                            }
+
+                            if (nIdx >= 0 && nIdx < normals.size()) {
+                                vec3 normal = normals.get(nIdx);
+                                copy.nx = normal.x;
+                                copy.ny = normal.y;
+                                copy.nz = normal.z;
                             }
 
                             faceVerts[i] = copy;
