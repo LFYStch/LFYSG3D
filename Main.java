@@ -7,7 +7,7 @@ import javax.imageio.*;
 
 
 public class Main {
-    public static void main(String[] args) {
+    public Main(){
         JFrame w = new JFrame();
         dP d = new dP();
         w.setTitle("3D Test");
@@ -17,6 +17,9 @@ public class Main {
         w.add(d);
         w.setVisible(true);
         new javax.swing.Timer(50, e -> d.update()).start();
+    }
+    public static void main(String[] args) {
+        new Main();
     }
 }
 
