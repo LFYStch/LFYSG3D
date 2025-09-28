@@ -86,22 +86,6 @@ class dP extends JPanel {
         int[] xPoints = { (int) v1.x, (int) v2.x, (int) v3.x };
         int[] yPoints = { (int) v1.y, (int) v2.y, (int) v3.y };
 
-        // Optional outline pass
-        double nx = (t.v1.nx + t.v2.nx + t.v3.nx) / 3.0;
-        double ny = (t.v1.ny + t.v2.ny + t.v3.ny) / 3.0;
-        double nz = (t.v1.nz + t.v2.nz + t.v3.nz) / 3.0;
-        double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-        if (len > 0.0001) {
-            nx /= len;
-            ny /= len;
-            nz /= len;
-        }
-        double edgeDot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
-        if (edgeDot < 0.2) {
-            g2d.setColor(Color.BLACK);
-            g2d.drawPolygon(xPoints, yPoints, 3);
-        }
-
         int minX = Math.max(0, Math.min(xPoints[0], Math.min(xPoints[1], xPoints[2])));
         int maxX = Math.min(getWidth() - 1, Math.max(xPoints[0], Math.max(xPoints[1], xPoints[2])));
         int minY = Math.max(0, Math.min(yPoints[0], Math.min(yPoints[1], yPoints[2])));
@@ -116,18 +100,18 @@ class dP extends JPanel {
                     double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
                     double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
 
-                    double px = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
-                    double py = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
-                    double pz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
+                    double nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
+                    double ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
+                    double nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
 
-                    double plen = Math.sqrt(px * px + py * py + pz * pz);
-                    if (plen > 0.0001) {
-                        px /= plen;
-                        py /= plen;
-                        pz /= plen;
+                    double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+                    if (len > 0.0001) {
+                        nx /= len;
+                        ny /= len;
+                        nz /= len;
                     }
 
-                    double dot = px * lightDir.x + py * lightDir.y + pz * lightDir.z;
+                    double dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
                     float intensity = celShade(dot);
 
                     int texX = (int)(u * texture.getWidth());
