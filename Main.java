@@ -112,7 +112,7 @@ class dP extends JPanel {
                     }
 
                     double dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
-                    float intensity = celShade(dot);
+                    float intensity = Math.max(0.1f, (float) dot); // soft ambient floor
 
                     int texX = (int)(u * texture.getWidth());
                     int texY = (int)(v * texture.getHeight());
@@ -120,9 +120,9 @@ class dP extends JPanel {
                     if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
                         int rgb = texture.getRGB(texX, texY);
                         Color texColor = new Color(rgb);
-                        int r = quantize(texColor.getRed() * intensity);
-                        int g = quantize(texColor.getGreen() * intensity);
-                        int b = quantize(texColor.getBlue() * intensity);
+                        int r = (int)(texColor.getRed() * intensity);
+                        int g = (int)(texColor.getGreen() * intensity);
+                        int b = (int)(texColor.getBlue() * intensity);
                         g2d.setColor(new Color(clamp(r), clamp(g), clamp(b)));
                         g2d.drawLine(x, y, x, y);
                     }
@@ -130,21 +130,6 @@ class dP extends JPanel {
             }
         }
     }
-}
-
-// Cel-shading bands
-private float celShade(double dot) {
-    if (dot > 0.95) return 1.0f;
-    else if (dot > 0.75) return 0.8f;
-    else if (dot > 0.5) return 0.6f;
-    else if (dot > 0.25) return 0.4f;
-    else return 0.2f;
-}
-
-// RGB quantization for flatter look
-private int quantize(float val) {
-    int levels = 4; // tweak for stylization
-    return clamp((int)(Math.round(val / 255.0 * (levels - 1)) * (255 / (levels - 1))));
 }
 
 private int clamp(int val) {
