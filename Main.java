@@ -86,6 +86,22 @@ class dP extends JPanel {
         int[] xPoints = { (int) v1.x, (int) v2.x, (int) v3.x };
         int[] yPoints = { (int) v1.y, (int) v2.y, (int) v3.y };
 
+        // Optional outline pass
+        double nx = (t.v1.nx + t.v2.nx + t.v3.nx) / 3.0;
+        double ny = (t.v1.ny + t.v2.ny + t.v3.ny) / 3.0;
+        double nz = (t.v1.nz + t.v2.nz + t.v3.nz) / 3.0;
+        double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (len > 0.0001) {
+            nx /= len;
+            ny /= len;
+            nz /= len;
+        }
+        double edgeDot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
+        if (edgeDot < 0.2) {
+            g2d.setColor(Color.BLACK);
+            g2d.drawPolygon(xPoints, yPoints, 3);
+        }
+
         int minX = Math.max(0, Math.min(xPoints[0], Math.min(xPoints[1], xPoints[2])));
         int maxX = Math.min(getWidth() - 1, Math.max(xPoints[0], Math.max(xPoints[1], xPoints[2])));
         int minY = Math.max(0, Math.min(yPoints[0], Math.min(yPoints[1], yPoints[2])));
@@ -100,22 +116,19 @@ class dP extends JPanel {
                     double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
                     double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
 
-                    double nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
-                    double ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
-                    double nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
+                    double px = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
+                    double py = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
+                    double pz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
 
-                    double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-                    if (len > 0.0001) {
-                        nx /= len;
-                        ny /= len;
-                        nz /= len;
+                    double plen = Math.sqrt(px * px + py * py + pz * pz);
+                    if (plen > 0.0001) {
+                        px /= plen;
+                        py /= plen;
+                        pz /= plen;
                     }
 
-                    double dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
-                    float intensity;
-                    if (dot > 0.95) intensity = 1.0f;
-                    else if (dot > 0.5) intensity = 0.6f;
-                    else intensity = 0.3f;
+                    double dot = px * lightDir.x + py * lightDir.y + pz * lightDir.z;
+                    float intensity = celShade(dot);
 
                     int texX = (int)(u * texture.getWidth());
                     int texY = (int)(v * texture.getHeight());
@@ -123,9 +136,9 @@ class dP extends JPanel {
                     if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
                         int rgb = texture.getRGB(texX, texY);
                         Color texColor = new Color(rgb);
-                        int r = (int)(texColor.getRed() * intensity);
-                        int g = (int)(texColor.getGreen() * intensity);
-                        int b = (int)(texColor.getBlue() * intensity);
+                        int r = quantize(texColor.getRed() * intensity);
+                        int g = quantize(texColor.getGreen() * intensity);
+                        int b = quantize(texColor.getBlue() * intensity);
                         g2d.setColor(new Color(clamp(r), clamp(g), clamp(b)));
                         g2d.drawLine(x, y, x, y);
                     }
@@ -133,6 +146,21 @@ class dP extends JPanel {
             }
         }
     }
+}
+
+// Cel-shading bands
+private float celShade(double dot) {
+    if (dot > 0.95) return 1.0f;
+    else if (dot > 0.75) return 0.8f;
+    else if (dot > 0.5) return 0.6f;
+    else if (dot > 0.25) return 0.4f;
+    else return 0.2f;
+}
+
+// RGB quantization for flatter look
+private int quantize(float val) {
+    int levels = 4; // tweak for stylization
+    return clamp((int)(Math.round(val / 255.0 * (levels - 1)) * (255 / (levels - 1))));
 }
 
 private int clamp(int val) {
