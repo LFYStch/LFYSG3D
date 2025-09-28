@@ -61,7 +61,7 @@ class dP extends JPanel {
         drawMesh(sp.LFYS(0,0,1,0,i,i),g2d,texture1);
     }
     //No edits past here! >:(
-    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
+   public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
         Collections.addAll(sortedTris, strip);
@@ -112,7 +112,10 @@ class dP extends JPanel {
                     }
 
                     double dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
-                    float intensity = Math.max(0.1f, (float) dot); // soft ambient floor
+                    float intensity;
+                    if (dot > 0.95) intensity = 1.0f;
+                    else if (dot > 0.5) intensity = 0.6f;
+                    else intensity = 0.3f;
 
                     int texX = (int)(u * texture.getWidth());
                     int texY = (int)(v * texture.getHeight());
@@ -135,6 +138,7 @@ class dP extends JPanel {
 private int clamp(int val) {
     return Math.max(0, Math.min(255, val));
 }
+
 
 
 double[] computeBarycentric(double x1, double y1, double x2, double y2, double x3, double y3, int px, int py) {
