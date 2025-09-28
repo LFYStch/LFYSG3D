@@ -285,6 +285,23 @@ class AABB {
                     v.x = x2 + cx;
                     v.y = y2 + cy;
                     v.z = z1 + cz;
+
+                    double nx = v.nx - cx;
+                    double ny = v.ny - cy;
+                    double nz = v.nz - cz;
+
+                    // Y-axis rotation (around vertical axis)
+                    double nx1 = nx * Math.cos(theta) - nz * Math.sin(theta);
+                    double nz1 = nx * Math.sin(theta) + nz * Math.cos(theta);
+
+                    // Z-axis rotation (around forward axis)
+                    double nx2 = nx1 * Math.cos(phi) - ny * Math.sin(phi);
+                    double ny2 = nx1 * Math.sin(phi) + ny * Math.cos(phi);
+
+                    // Translate back
+                    v.nx = nx2 + cx;
+                    v.ny = ny2 + cy;
+                    v.nz = nz1 + cz;
                 }
             }
         }
