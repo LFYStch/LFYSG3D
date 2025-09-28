@@ -44,7 +44,7 @@ class dP extends JPanel {
 
     public void loadTextures() {
         try {
-            texture1 = ImageIO.read(new File("dir.jpg"));
+            texture1 = ImageIO.read(new File("dir.png"));
             
         } catch (IOException e) {
             System.err.println("Texture load failed.");
