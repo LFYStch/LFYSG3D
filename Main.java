@@ -224,7 +224,7 @@ class spawner {
     public mesh LFYS(double x, double y, double z, int aI, double theta, double psi) {
     
     GameObject LFYS = new GameObject(new mesh[]{
-        loader.load("Cube.obj",x,y,z)
+        loader.load("Cube.obj",x,y,z,1)
     }, new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), theta, psi, x, y, z);
     return LFYS.getMesh(aI);
 }
@@ -312,7 +312,7 @@ class AABB {
 
 
 class Objloader {
-    public mesh load(String path, double offsetX, double offsetY, double offsetZ) {
+    public mesh load(String path, double offsetX, double offsetY, double offsetZ,double size) {
         java.util.List<vec3> vertices = new java.util.ArrayList<>();
         java.util.List<vec2> uvs = new java.util.ArrayList<>();
         java.util.List<vec3> normals = new java.util.ArrayList<>();
@@ -326,9 +326,9 @@ class Objloader {
 
                 switch (parts[0]) {
                     case "v": {
-                        double x = Double.parseDouble(parts[1]) + offsetX;
-                        double y = Double.parseDouble(parts[2]) + offsetY;
-                        double z = Double.parseDouble(parts[3]) + offsetZ;
+                        double x = (Double.parseDouble(parts[1]) + offsetX)*size;
+                        double y = (Double.parseDouble(parts[2]) + offsetY)*size;
+                        double z = (Double.parseDouble(parts[3]) + offsetZ)*size;
                         vertices.add(new vec3(x, y, z, 0, 0));
                         break;
                     }
