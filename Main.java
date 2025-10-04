@@ -245,7 +245,7 @@ class AABB {
                aabbO.min.y > aabbT.max.y && aabbO.min.y < aabbT.max.y &&
                aabbO.min.z > aabbT.max.z && aabbO.min.z < aabbT.max.z;
     }
-    public vec3 HMTMAC(AABB aabb0,AABB aabbT){
+    public vec3 HMTMAC(AABB aabbO,AABB aabbT){
         if(aabbO.onColide(aabbO,aabbT)){
             return new vec3( aabbT.max.x-aabbO.min.x,aabbT.max.y-aabbO.min.y,aabbT.max.z-aabbO.min.z);
         }
