@@ -247,7 +247,7 @@ class AABB {
     }
     public vec3 HMTMAC(AABB aabbO,AABB aabbT){
         if(aabbO.onColide(aabbO,aabbT)){
-            return new vec3( aabbT.max.x-aabbO.min.x,aabbT.max.y-aabbO.min.y,aabbT.max.z-aabbO.min.z);
+            return new vec3( aabbT.max.x-aabbO.min.x,aabbT.max.y-aabbO.min.y,aabbT.max.z-aabbO.min.z,0,0);
         }
     }
 }
