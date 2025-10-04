@@ -252,6 +252,7 @@ class AABB {
             return new vec3(0,0,0,0,0);
     }
 }
+}
 
   class GameObject {
     mesh[] anims;
