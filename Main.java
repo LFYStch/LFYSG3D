@@ -279,10 +279,20 @@ class AABB {
                     double x = v.x - cx;
                     double y = v.y - cy;
                     double z = v.z - cz;
+                     double nx = v.nx;
+                    double ny = v.ny;
+                    double nz = v.nz;
 
                     // Y-axis rotation (around vertical axis)
                     double x1 = x * Math.cos(theta) - z * Math.sin(theta);
                     double z1 = x * Math.sin(theta) + z * Math.cos(theta);
+                    
+                    double nx1 = nx * Math.cos(theta) - nz * Math.sin(theta);
+                    double nz1 = nx * Math.sin(theta) + nz * Math.cos(theta);
+                    
+                    // Z-axis rotation (phi)
+                    double nx2 = nx1 * Math.cos(phi) - ny * Math.sin(phi);
+                    double ny2 = nx1 * Math.sin(phi) + ny * Math.cos(phi);
 
                     // Z-axis rotation (around forward axis)
                     double x2 = x1 * Math.cos(phi) - y * Math.sin(phi);
@@ -292,6 +302,9 @@ class AABB {
                     v.x = x2 + cx;
                     v.y = y2 + cy;
                     v.z = z1 + cz;
+                    v.nx = nx2;
+                    v.ny = ny2;
+                    v.nz = nz1;
 
                     
                 }
