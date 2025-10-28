@@ -56,9 +56,7 @@ class dP extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
-        g2d.setColor(Color.BLUE);
-        g2d.fillRect(0, 0, getWidth(), getHeight());
-        drawMesh(sp.LFYS(0,0,25,0,i,i),g2d,texture1);
+        runTheCode(g2d);
     }
     //No edits past here! >:(
    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
