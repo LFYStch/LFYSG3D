@@ -1,4 +1,4 @@
 clear
-javac Main.java
+javac *.java
 echo "Made with LFYSG3D"
 java Main
