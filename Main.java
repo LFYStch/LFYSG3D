@@ -4,6 +4,7 @@ import java.awt.image.*;
 import java.util.*;
 import java.io.*;
 import javax.imageio.*;
+import MainCode.*;
 
 
 public class Main {
@@ -24,6 +25,7 @@ public class Main {
 }
 
 class dP extends JPanel {
+    public Graphics2D g2d;
     vec3 cam;
     double camYaw, camPitch;
     vec3 light_source1;
@@ -55,7 +57,7 @@ class dP extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
+        g2d = (Graphics2D) g;
         runTheCode(g2d);
     }
     //No edits past here! >:(
