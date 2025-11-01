@@ -13,7 +13,7 @@ public class Main {
         dP d = new dP();
         w.setTitle("3D Test");
         w.setSize(500, 500);
-        w.setResizable(false);
+        w.setResizable(true);
         w.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         w.add(d);
         w.setVisible(true);
@@ -77,9 +77,9 @@ class dP extends JPanel {
     vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
 
     for (tri t : sortedTris) {
-        vec2 v1 = t.v1.project(cam, camYaw, camPitch);
-        vec2 v2 = t.v2.project(cam, camYaw, camPitch);
-        vec2 v3 = t.v3.project(cam, camYaw, camPitch);
+        vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
+        vec2 v2 = t.v2.project(cam, camYaw, camPitch,getWidth(),getHeight());
+        vec2 v3 = t.v3.project(cam, camYaw, camPitch,getWidth(),getHeight());
 
         if (Double.isNaN(v1.x) || Double.isNaN(v2.x) || Double.isNaN(v3.x)) continue;
 
@@ -172,21 +172,27 @@ class vec3 {
 }
 
 
-    public vec2 project(vec3 cam, double yaw, double pitch) {
-        double nX = this.x - cam.x;
-        double nY = this.y - cam.y;
-        double nZ = this.z - cam.z;
-        if (nZ >= cam.z) {
-            double rotX = nX * Math.cos(yaw) - nZ * Math.sin(yaw);
-            double rotZ = nX * Math.sin(yaw) + nZ * Math.cos(yaw);
-            double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
-            double finalZ = nY * Math.sin(pitch) + rotZ * Math.cos(pitch);
-            double scale = 200 / Math.max(finalZ, 0.1);
-            return new vec2(rotX * scale + 250, finalY * scale + 250);
-        } else {
-            return new vec2(Double.NaN, Double.NaN);
-        }
+    public vec2 project(vec3 cam, double yaw, double pitch, int screenWidth, int screenHeight) {
+    double nX = this.x - cam.x;
+    double nY = this.y - cam.y;
+    double nZ = this.z - cam.z;
+
+    if (nZ > 0) { // Point is in front of camera
+        double rotX = nX * Math.cos(yaw) - nZ * Math.sin(yaw);
+        double rotZ = nX * Math.sin(yaw) + nZ * Math.cos(yaw);
+        double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
+        double finalZ = nY * Math.sin(pitch) + rotZ * Math.cos(pitch);
+
+        double scale = 200 / Math.max(finalZ, 0.1);
+        double screenCenterX = screenWidth / 2.0;
+        double screenCenterY = screenHeight / 2.0;
+
+        return new vec2(rotX * scale + screenCenterX, finalY * scale + screenCenterY);
+    } else {
+        return new vec2(Double.NaN, Double.NaN);
     }
+}
+
 }
 
 class vec2 {
