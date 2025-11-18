@@ -398,3 +398,92 @@ class Objloader {
         return new mesh(new tri[][] { triangles.toArray(new tri[0]) });
     }
 }
+class KeyFrame {
+    public double lerp(double a, double b, double t) {
+        return a + (b - a) * t;
+    }
+    
+    public vec3 lerpVec3(vec3 a, vec3 b, double t) {
+        return new vec3(
+            lerp(a.x, b.x, t),
+            lerp(a.y, b.y, t),
+            lerp(a.z, b.z, t),
+            lerp(a.u, b.u, t),
+            lerp(a.v, b.v, t)
+        );
+    }
+    
+    GameObject[] KEY; 
+    vec3[][] AnimIndexforAnim; 
+    private double animationTime = 0;
+    private int currentFrame = 0;
+    private boolean looping = true;
+    private double frameDuration = 0.5; 
+    public KeyFrame(GameObject[] KEY, vec3[][] AnimIndexforAnim) {
+        this.KEY = KEY;
+        this.AnimIndexforAnim = AnimIndexforAnim;
+    }
+    
+    public void runAnimation(double deltaTime) {
+        animationTime += deltaTime;
+        
+    
+        int nextFrame = (currentFrame + 1) % AnimIndexforAnim[0].length;
+      
+        if (animationTime >= frameDuration) {
+            currentFrame = nextFrame;
+            nextFrame = (currentFrame + 1) % AnimIndexforAnim[0].length;
+            animationTime = 0;
+            
+           
+            if (!looping && currentFrame == AnimIndexforAnim[0].length - 1) {
+                return;
+            }
+        }
+        
+       
+        double t = animationTime / frameDuration;
+        t = Math.max(0, Math.min(1, t));
+        
+      
+        for (int objectIndex = 0; objectIndex < KEY.length; objectIndex++) {
+            if (KEY[objectIndex] != null && objectIndex < AnimIndexforAnim.length) {
+                animateObject(objectIndex, currentFrame, nextFrame, t);
+            }
+        }
+    }
+    
+    private void animateObject(int objectIndex, int currentFrame, int nextFrame, double t) {
+        
+        vec3 currentPos = AnimIndexforAnim[objectIndex][currentFrame];
+        vec3 nextPos = AnimIndexforAnim[objectIndex][nextFrame];
+        
+        
+        vec3 newPos = lerpVec3(currentPos, nextPos, t);
+        
+       
+        GameObject obj = KEY[objectIndex];
+        obj.cx = newPos.x; 
+        obj.cy = newPos.y;   
+        obj.cz = newPos.z;  
+        obj.theta = newPos.u;
+        obj.phi = newPos.v;   
+    }
+    
+    public void reset() {
+        animationTime = 0;
+        currentFrame = 0;
+    }
+    
+    public void setLooping(boolean loop) {
+        this.looping = loop;
+    }
+    
+    public void setFrameDuration(double duration) {
+        this.frameDuration = duration;
+    }
+    
+    public boolean isFinished() {
+        return !looping && currentFrame == AnimIndexforAnim[0].length - 1;
+    }
+}
