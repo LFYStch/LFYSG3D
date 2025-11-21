@@ -74,7 +74,8 @@ class dP extends JPanel {
         return Double.compare(zb, za);
     });
 
-    vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
+    vec3 lightDir = new vec3(0, 0, -1, 0, 0);
+    
 
     for (tri t : sortedTris) {
         vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
@@ -176,8 +177,9 @@ class vec3 {
     double nX = this.x - cam.x;
     double nY = this.y - cam.y;
     double nZ = this.z - cam.z;
+    double dot  = (cam.nx*Math.cos(yaw)-nz*Math.sin(yaw)) * nX + (cam.ny*Math.cos(pitch)-nz*Math.sin(pitch)) * nY + cam.nz * nZ;
 
-    if (nZ > 0) { // Point is in front of camera
+    if (nZ > 0 || dot == Math.cos(45)) { // Point is in front of camera
         double rotX = nX * Math.cos(yaw) - nZ * Math.sin(yaw);
         double rotZ = nX * Math.sin(yaw) + nZ * Math.cos(yaw);
         double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
