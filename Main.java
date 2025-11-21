@@ -1,24 +1,45 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.awt.image.*;
 import java.util.*;
 import java.io.*;
 import javax.imageio.*;
 
 
+public class Main implements KeyListener {
+    private dP d; 
 
-public class Main {
-    public Main(){
+    public Main() {
         JFrame w = new JFrame();
-        dP d = new dP();
+        d = new dP();
         w.setTitle("3D Test");
         w.setSize(500, 500);
         w.setResizable(true);
         w.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         w.add(d);
         w.setVisible(true);
+        w.addKeyListener(this);
+
         new javax.swing.Timer(50, e -> d.update()).start();
     }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_F5:
+                System.out.println("");
+                d.debug = !d.debug;
+                break;
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {}
+
+    @Override
+    public void keyReleased(KeyEvent e) {}
+
     public static void main(String[] args) {
         new Main();
     }
@@ -29,6 +50,8 @@ class dP extends JPanel {
     vec3 cam;
     double camYaw, camPitch;
     vec3 light_source1;
+    int totalTris;
+    boolean debug = false;
     BufferedImage texture1;
     spawner sp;
     float alpha = 0.5f;
@@ -104,6 +127,7 @@ class dP extends JPanel {
     vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
 
     for (tri t : sortedTris) {
+        totalTris+=1;
         vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
         vec2 v2 = t.v2.project(cam, camYaw, camPitch,getWidth(),getHeight());
         vec2 v3 = t.v3.project(cam, camYaw, camPitch,getWidth(),getHeight());
@@ -137,7 +161,7 @@ class dP extends JPanel {
                         ny /= len;
                         nz /= len;
                     }
-
+                    
                     double dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
                     float intensity;
                     if (dot > 0.95) intensity = 1.0f;
@@ -177,6 +201,13 @@ double[] computeBarycentric(double x1, double y1, double x2, double y2, double x
 }
 public void update(){
   repaint();
+  
+    if(debug){
+        
+        System.out.print("\033[1A");
+        System.out.println(totalTris + "\r");
+    }
+    totalTris = 0;
 }
 
 
