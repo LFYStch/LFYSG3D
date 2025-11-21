@@ -33,6 +33,7 @@ class dP extends JPanel {
     spawner sp;
     float alpha = 0.5f;
     double i = 0;
+    Objloader loader = new Objloader();
 
     public dP() {
         setDoubleBuffered(true);
@@ -53,12 +54,38 @@ class dP extends JPanel {
             e.printStackTrace();
         }
     }
+    KeyFrame simpleAnim = new KeyFrame(
+        new GameObject[] {
+            new GameObject(
+                new mesh[]{
+                    loader.load("Cube.obj", 0, 0, 0, 0.05, 0.1, 0.1)
+                }, 
+                new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), 
+                0, 0, 0, 0, 0
+            )
+        },
+        new vec3[][]{ 
+            {
+                new vec3(0, 0, 20, 0, 0),                    // Frame 0
+                new vec3(5, 5, 25, Math.PI/4, Math.PI/4),    // Frame 1  
+                new vec3(10, 10, 27, Math.PI/2, Math.PI/2),  // Frame 2
+                new vec3(5, 5, 25, Math.PI/4, Math.PI/4),    // Frame 3
+                new vec3(0, 0, 20, 0, 0)                     // Frame 4
+            }
+        }
+    );
     //Main drawloop starts here! :)
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         g2d = (Graphics2D) g;
-        drawMesh(sp.LFYS(0,0,25,0,i,i),g2d,texture1);
+        simpleAnim.runAnimation(0.005);
+        
+       mesh drawer;
+        for(int j = 0; j < simpleAnim.KEY.length; j++){ // Use different variable name
+            drawer = simpleAnim.KEY[j].getMesh(0);
+            drawMesh(drawer, g2d, texture1);
+        }
     }
     //No edits past here! >:(
    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
@@ -74,8 +101,7 @@ class dP extends JPanel {
         return Double.compare(zb, za);
     });
 
-    vec3 lightDir = new vec3(0, 0, -1, 0, 0);
-    
+    vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
 
     for (tri t : sortedTris) {
         vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
@@ -151,8 +177,9 @@ double[] computeBarycentric(double x1, double y1, double x2, double y2, double x
 }
 public void update(){
   repaint();
-  i+=0.01;
 }
+
+
 }
 
 class vec3 {
@@ -194,7 +221,6 @@ class vec3 {
         return new vec2(Double.NaN, Double.NaN);
     }
 }
-
 }
 
 class vec2 {
