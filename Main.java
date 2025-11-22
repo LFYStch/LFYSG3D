@@ -61,6 +61,7 @@ class dP extends JPanel {
     public dP() {
         setDoubleBuffered(true);
         cam = new vec3(0, 0, -10, 0, 0);
+        cam.nx = cam.x + Math.cos(camYaw);cam.ny = cam.y + Math.cos(camPitch);cam.nz = cam.z + Math.sin(camYaw) + 10;
         light_source1 = new vec3(cam.x, cam.y, cam.z - 2, 0, 0);
         camYaw = 0;
         camPitch = 0;
@@ -127,6 +128,27 @@ class dP extends JPanel {
     vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
 
     for (tri t : sortedTris) {
+        double ax = t.v2.x - t.v1.x;
+    double ay = t.v2.y - t.v1.y;
+    double az = t.v2.z - t.v1.z;
+
+    double bx = t.v3.x - t.v1.x;
+    double by = t.v3.y - t.v1.y;
+    double bz = t.v3.z - t.v1.z;
+
+    double nx = ay * bz - az * by;
+    double ny = az * bx - ax * bz;
+    double nz = ax * by - ay * bx;
+
+ 
+    double cx = t.v1.x - cam.x;
+    double cy = t.v1.y - cam.y;
+    double cz = t.v1.z - cam.z;
+
+  
+    double dot = nx * cx + ny * cy + nz * cz;
+    if (dot >= 0) continue; 
+
         totalTris+=1;
         vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
         vec2 v2 = t.v2.project(cam, camYaw, camPitch,getWidth(),getHeight());
@@ -151,9 +173,9 @@ class dP extends JPanel {
                     double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
                     double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
 
-                    double nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
-                    double ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
-                    double nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
+                    nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
+                    ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
+                    nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
 
                     double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
                     if (len > 0.0001) {
@@ -162,7 +184,7 @@ class dP extends JPanel {
                         nz /= len;
                     }
                     
-                    double dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
+                    dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
                     float intensity;
                     if (dot > 0.95) intensity = 1.0f;
                     else if (dot > 0.5) intensity = 0.6f;
