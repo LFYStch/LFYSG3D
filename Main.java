@@ -1,24 +1,45 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.awt.image.*;
 import java.util.*;
 import java.io.*;
 import javax.imageio.*;
 
 
+public class Main implements KeyListener {
+    private dP d; 
 
-public class Main {
-    public Main(){
+    public Main() {
         JFrame w = new JFrame();
-        dP d = new dP();
+        d = new dP();
         w.setTitle("3D Test");
         w.setSize(500, 500);
         w.setResizable(true);
         w.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         w.add(d);
         w.setVisible(true);
+        w.addKeyListener(this);
+
         new javax.swing.Timer(50, e -> d.update()).start();
     }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_F5:
+                System.out.println("");
+                d.debug = !d.debug;
+                break;
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {}
+
+    @Override
+    public void keyReleased(KeyEvent e) {}
+
     public static void main(String[] args) {
         new Main();
     }
@@ -29,6 +50,8 @@ class dP extends JPanel {
     vec3 cam;
     double camYaw, camPitch;
     vec3 light_source1;
+    int totalTris;
+    boolean debug = false;
     BufferedImage texture1;
     spawner sp;
     float alpha = 0.5f;
@@ -38,6 +61,7 @@ class dP extends JPanel {
     public dP() {
         setDoubleBuffered(true);
         cam = new vec3(0, 0, -10, 0, 0);
+        cam.nx = cam.x + Math.cos(camYaw);cam.ny = cam.y + Math.cos(camPitch);cam.nz = cam.z + Math.sin(camYaw) + 10;
         light_source1 = new vec3(cam.x, cam.y, cam.z - 2, 0, 0);
         camYaw = 0;
         camPitch = 0;
@@ -104,6 +128,28 @@ class dP extends JPanel {
     vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
 
     for (tri t : sortedTris) {
+        double ax = t.v2.x - t.v1.x;
+    double ay = t.v2.y - t.v1.y;
+    double az = t.v2.z - t.v1.z;
+
+    double bx = t.v3.x - t.v1.x;
+    double by = t.v3.y - t.v1.y;
+    double bz = t.v3.z - t.v1.z;
+
+    double nx = ay * bz - az * by;
+    double ny = az * bx - ax * bz;
+    double nz = ax * by - ay * bx;
+
+ 
+    double cx = t.v1.x - cam.x;
+    double cy = t.v1.y - cam.y;
+    double cz = t.v1.z - cam.z;
+
+  
+    double dot = nx * cx + ny * cy + nz * cz;
+    if (dot >= 0) continue; 
+
+        totalTris+=1;
         vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
         vec2 v2 = t.v2.project(cam, camYaw, camPitch,getWidth(),getHeight());
         vec2 v3 = t.v3.project(cam, camYaw, camPitch,getWidth(),getHeight());
@@ -127,9 +173,9 @@ class dP extends JPanel {
                     double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
                     double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
 
-                    double nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
-                    double ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
-                    double nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
+                    nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
+                    ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
+                    nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
 
                     double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
                     if (len > 0.0001) {
@@ -137,8 +183,8 @@ class dP extends JPanel {
                         ny /= len;
                         nz /= len;
                     }
-
-                    double dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
+                    
+                    dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
                     float intensity;
                     if (dot > 0.95) intensity = 1.0f;
                     else if (dot > 0.5) intensity = 0.6f;
@@ -177,6 +223,13 @@ double[] computeBarycentric(double x1, double y1, double x2, double y2, double x
 }
 public void update(){
   repaint();
+  
+    if(debug){
+        
+        System.out.print("\033[1A");
+        System.out.println(totalTris + "\r");
+    }
+    totalTris = 0;
 }
 
 
