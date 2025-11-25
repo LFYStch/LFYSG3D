@@ -7,6 +7,8 @@ import java.io.*;
 import javax.imageio.*;
 
 
+
+
 public class Main implements KeyListener {
     private dP d; 
 
@@ -31,6 +33,7 @@ public class Main implements KeyListener {
                 System.out.println("");
                 d.debug = !d.debug;
                 break;
+           
         }
     }
 
@@ -46,6 +49,12 @@ public class Main implements KeyListener {
 }
 
 class dP extends JPanel {
+    
+    private AnimatedObject animatedCube;
+    private boolean animationPlaying = false;
+   
+    private GameObject cube1;
+    private GameObject cube2;
     public Graphics2D g2d;
     vec3 cam;
     double camYaw, camPitch;
@@ -55,18 +64,20 @@ class dP extends JPanel {
     BufferedImage texture1;
     spawner sp;
     float alpha = 0.5f;
-    double i = 0;
+    
+   
     Objloader loader = new Objloader();
 
     public dP() {
         setDoubleBuffered(true);
-        cam = new vec3(0, 0, -10, 0, 0);
+        cam = new vec3(0, 0, -30, 0, 0);
         cam.nx = cam.x + Math.cos(camYaw);cam.ny = cam.y + Math.cos(camPitch);cam.nz = cam.z + Math.sin(camYaw) + 10;
         light_source1 = new vec3(cam.x, cam.y, cam.z - 2, 0, 0);
         camYaw = 0;
         camPitch = 0;
         loadTextures();
         sp = new spawner();
+        this.setupExample();
     }
 
     public void loadTextures() {
@@ -78,39 +89,69 @@ class dP extends JPanel {
             e.printStackTrace();
         }
     }
-    KeyFrame simpleAnim = new KeyFrame(
-        new GameObject[] {
-            new GameObject(
-                new mesh[]{
-                    loader.load("Cube.obj", 0, 0, 0, 0.05, 0.1, 0.1)
-                }, 
-                new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), 
-                0, 0, 0, 0, 0
-            )
+    
+    
+   public void setupExample() {
+    
+    cube1 = new GameObject(
+        new mesh[]{
+            loader.load("Cube.obj", 0, 0, 20, 0.1, 0.1, 0.5)
         },
-        new vec3[][]{ 
-            {
-                new vec3(0, 0, 20, 0, 0),                    // Frame 0
-                new vec3(5, 5, 25, Math.PI/4, Math.PI/4),    // Frame 1  
-                new vec3(10, 10, 27, Math.PI/2, Math.PI/2),  // Frame 2
-                new vec3(5, 5, 25, Math.PI/4, Math.PI/4),    // Frame 3
-                new vec3(0, 0, 20, 0, 0)                     // Frame 4
-            }
-        }
+        new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)),
+        0, 0, -5, 0, 0  
     );
+
+    cube2 = new GameObject(
+        new mesh[]{
+            loader.load("Cube.obj", 0, 0, 20, 0.1, 0.1, 0.5)
+        },
+        new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)),
+        0, 0, 5, 0, 0   
+    );
+
+   
+    vec3[][] animPaths = new vec3[2][];
+    
+    
+    animPaths[0] = new vec3[]{
+        new vec3(-3, -2, 20, 0, 0),
+        new vec3(-3, 2, 20, Math.PI, 0),
+        new vec3(-3, -2, 20, 2*Math.PI, 0)
+    };
+    
+    
+    animPaths[1] = new vec3[]{
+        new vec3(3, -2, 20, 0, 0),
+        new vec3(3, 2, 20, Math.PI, 0),
+        new vec3(3, -2, 20, 2*Math.PI, 0)
+    };
+
+    Animation combinedAnimation = new Animation(
+        new GameObject[]{cube1, cube2}, 
+        animPaths
+    );
+
+    animatedCube = new AnimatedObject(
+        new Animation[]{combinedAnimation},
+        new GameObject[]{cube1, cube2}
+    );
+}
     //Main drawloop starts here! :)
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        g2d = (Graphics2D) g;
-        simpleAnim.runAnimation(0.005);
-        
-       mesh drawer;
-        for(int j = 0; j < simpleAnim.KEY.length; j++){ // Use different variable name
-            drawer = simpleAnim.KEY[j].getMesh(0);
-            drawMesh(drawer, g2d, texture1);
+protected void paintComponent(Graphics g) {
+    super.paintComponent(g);
+    g2d = (Graphics2D) g;
+    
+    // Draw all animated objects
+    for (GameObject obj : animatedCube.Objects) {
+            if (obj != null) {
+                mesh currentMesh = obj.getMesh(0);
+                if (currentMesh != null) {
+                    drawMesh(currentMesh, g2d, texture1);
+                }
+            }
         }
-    }
+}
     //No edits past here! >:(
    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
@@ -128,26 +169,19 @@ class dP extends JPanel {
     vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
 
     for (tri t : sortedTris) {
-        double ax = t.v2.x - t.v1.x;
-    double ay = t.v2.y - t.v1.y;
-    double az = t.v2.z - t.v1.z;
+        double nx = (t.v1.nx + t.v2.nx + t.v3.nx) / 3.0;
+        double ny = (t.v1.ny + t.v2.ny + t.v3.ny) / 3.0;
+        double nz = (t.v1.nz + t.v2.nz + t.v3.nz) / 3.0;
 
-    double bx = t.v3.x - t.v1.x;
-    double by = t.v3.y - t.v1.y;
-    double bz = t.v3.z - t.v1.z;
+        // Calculate vector from camera to face center
+        
+        
 
-    double nx = ay * bz - az * by;
-    double ny = az * bx - ax * bz;
-    double nz = ax * by - ay * bx;
+        // Dot product determines if face is visible
+        double dot = nx * cam.nx + ny * cam.ny + nz * cam.nz;
 
- 
-    double cx = t.v1.x - cam.x;
-    double cy = t.v1.y - cam.y;
-    double cz = t.v1.z - cam.z;
-
-  
-    double dot = nx * cx + ny * cy + nz * cz;
-    if (dot >= 0) continue; 
+        // Only render faces pointing toward camera
+        if (dot > 0) continue;
 
         totalTris+=1;
         vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
@@ -230,11 +264,12 @@ public void update(){
         System.out.println(totalTris + "\r");
     }
     totalTris = 0;
-}
+
+    animatedCube.playAnimation(0);
 
 
 }
-
+}
 class vec3 {
     double x, y, z;
     double u, v;
@@ -257,9 +292,9 @@ class vec3 {
     double nX = this.x - cam.x;
     double nY = this.y - cam.y;
     double nZ = this.z - cam.z;
-    double dot  = (cam.nx*Math.cos(yaw)-nz*Math.sin(yaw)) * nX + (cam.ny*Math.cos(pitch)-nz*Math.sin(pitch)) * nY + cam.nz * nZ;
+    double dot  = (cam.nx * nX) + (cam.ny * nY) + (cam.nz * nZ);
 
-    if (nZ > 0 || dot == Math.cos(45)) { // Point is in front of camera
+    if (nZ > 0 || dot == 0.707) { // Point is in front of camera
         double rotX = nX * Math.cos(yaw) - nZ * Math.sin(yaw);
         double rotZ = nX * Math.sin(yaw) + nZ * Math.cos(yaw);
         double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
@@ -362,14 +397,13 @@ class AABB {
         for (tri[] row : lfys.tris) {
             for (tri t : row) {
                 for (vec3 v : new vec3[]{t.v1, t.v2, t.v3}) {
-                    // Translate to origin
+                    
                     double x = v.x - cx;
                     double y = v.y - cy;
                     double z = v.z - cz;
                      double nx = v.nx;
                     double ny = v.ny;
                     double nz = v.nz;
-
                     // Y-axis rotation (around vertical axis)
                     double x1 = x * Math.cos(theta) - z * Math.sin(theta);
                     double z1 = x * Math.sin(theta) + z * Math.cos(theta);
@@ -386,13 +420,15 @@ class AABB {
                     double y2 = x1 * Math.sin(phi) + y * Math.cos(phi);
 
                     // Translate back
+                    
                     v.x = x2 + cx;
                     v.y = y2 + cy;
                     v.z = z1 + cz;
                     v.nx = nx2;
                     v.ny = ny2;
                     v.nz = nz1;
-
+                    // Translate to origin
+                    
                     
                 }
             }
@@ -479,92 +515,115 @@ class Objloader {
         return new mesh(new tri[][] { triangles.toArray(new tri[0]) });
     }
 }
-class KeyFrame {
+class AnimatedObject {
+    Animation[] Animations;
+    GameObject[] Objects;
+    
+    public AnimatedObject(Animation[] Animations, GameObject[] Objects) {
+        this.Animations = Animations;
+        this.Objects = Objects;
+    }
+    
+    public void playAnimation(int Index) {
+        if (Index >= 0 && Index < Animations.length) {
+            Animations[Index].runAnimation(0.1);
+        }
+    }
+}
+class Animation {
+    GameObject[] KEY;
+    vec3[][] AnimPaths;
+    private int currentFrame = 0;
+    private long lastUpdateTime = 0;
+    private boolean looping = false; 
+    private boolean animationFinished = false;
+   
+    private double[] interpolationProgress;
+    
+    public Animation(GameObject[] KEY, vec3[][] AnimPaths) {
+        this.KEY = KEY;
+        this.AnimPaths = AnimPaths;
+        looping = false; 
+       
+        this.interpolationProgress = new double[KEY.length];
+        for (int i = 0; i < KEY.length; i++) {
+            interpolationProgress[i] = 0.0;
+        }
+    }
+    
+    public boolean isLooping() {
+        return looping;
+    }
+    
+    public void setLooping(boolean looping) {
+        this.looping = looping;
+    }
+    
     public double lerp(double a, double b, double t) {
         return a + (b - a) * t;
     }
     
-    public vec3 lerpVec3(vec3 a, vec3 b, double t) {
-        return new vec3(
-            lerp(a.x, b.x, t),
-            lerp(a.y, b.y, t),
-            lerp(a.z, b.z, t),
-            lerp(a.u, b.u, t),
-            lerp(a.v, b.v, t)
-        );
-    }
-    
-    GameObject[] KEY; 
-    vec3[][] AnimIndexforAnim; 
-    private double animationTime = 0;
-    private int currentFrame = 0;
-    private boolean looping = true;
-    private double frameDuration = 0.5; 
-    public KeyFrame(GameObject[] KEY, vec3[][] AnimIndexforAnim) {
-        this.KEY = KEY;
-        this.AnimIndexforAnim = AnimIndexforAnim;
-    }
-    
-    public void runAnimation(double deltaTime) {
-        animationTime += deltaTime;
+    public void runAnimation(double speed) {
+        if (animationFinished && !looping) {
+            return;
+        }
         
-    
-        int nextFrame = (currentFrame + 1) % AnimIndexforAnim[0].length;
+        if (KEY.length != AnimPaths.length) {
+            System.out.println("Error: KEY and AnimPaths arrays must have the same length");
+            return;
+        }
+        
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastUpdateTime < 100) { 
+            return;
+        }
+        lastUpdateTime = currentTime;
+        
+        boolean allReachedTarget = true;
+        
+        for (int i = 0; i < KEY.length; i++) {
+            if (currentFrame < AnimPaths[i].length) {
+                vec3 target = AnimPaths[i][currentFrame];
+                vec3 start = (currentFrame == 0) ? 
+                    new vec3(KEY[i].cx, KEY[i].cy, KEY[i].cz, KEY[i].theta, KEY[i].phi) :
+                    AnimPaths[i][currentFrame - 1];
+                
+               
+                interpolationProgress[i] += speed;
+                if (interpolationProgress[i] > 1.0) {
+                    interpolationProgress[i] = 1.0;
+                }
+                
+               
+                KEY[i].cx = lerp(start.x, target.x, interpolationProgress[i]);
+                KEY[i].cy = lerp(start.y, target.y, interpolationProgress[i]);
+                KEY[i].cz = lerp(start.z, target.z, interpolationProgress[i]);
+                KEY[i].theta = lerp(start.u, target.u, interpolationProgress[i]);
+                KEY[i].phi = lerp(start.v, target.v, interpolationProgress[i]);
+                
+                
+                if (interpolationProgress[i] < 1.0) {
+                    allReachedTarget = false;
+                }
+            }
+        }
+        
       
-        if (animationTime >= frameDuration) {
-            currentFrame = nextFrame;
-            nextFrame = (currentFrame + 1) % AnimIndexforAnim[0].length;
-            animationTime = 0;
+        if (allReachedTarget) {
             
-           
-            if (!looping && currentFrame == AnimIndexforAnim[0].length - 1) {
-                return;
+            for (int i = 0; i < KEY.length; i++) {
+                interpolationProgress[i] = 0.0;
+            }
+            
+            if (looping) {
+                currentFrame = (currentFrame + 1) % AnimPaths[0].length;
+            } else {
+                if (currentFrame < AnimPaths[0].length - 1) {
+                    currentFrame++;
+                } else {
+                    animationFinished = true;
+                }
             }
         }
-        
-       
-        double t = animationTime / frameDuration;
-        t = Math.max(0, Math.min(1, t));
-        
-      
-        for (int objectIndex = 0; objectIndex < KEY.length; objectIndex++) {
-            if (KEY[objectIndex] != null && objectIndex < AnimIndexforAnim.length) {
-                animateObject(objectIndex, currentFrame, nextFrame, t);
-            }
-        }
-    }
-    
-    private void animateObject(int objectIndex, int currentFrame, int nextFrame, double t) {
-        
-        vec3 currentPos = AnimIndexforAnim[objectIndex][currentFrame];
-        vec3 nextPos = AnimIndexforAnim[objectIndex][nextFrame];
-        
-        
-        vec3 newPos = lerpVec3(currentPos, nextPos, t);
-        
-       
-        GameObject obj = KEY[objectIndex];
-        obj.cx = newPos.x; 
-        obj.cy = newPos.y;   
-        obj.cz = newPos.z;  
-        obj.theta = newPos.u;
-        obj.phi = newPos.v;   
-    }
-    
-    public void reset() {
-        animationTime = 0;
-        currentFrame = 0;
-    }
-    
-    public void setLooping(boolean loop) {
-        this.looping = loop;
-    }
-    
-    public void setFrameDuration(double duration) {
-        this.frameDuration = duration;
-    }
-    
-    public boolean isFinished() {
-        return !looping && currentFrame == AnimIndexforAnim[0].length - 1;
     }
 }
