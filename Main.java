@@ -294,7 +294,7 @@ class vec3 {
     double nZ = this.z - cam.z;
     double dot  = (cam.nx * nX) + (cam.ny * nY) + (cam.nz * nZ);
 
-    if (nZ > 0 || dot == 0.707) { // Point is in front of camera
+    if (1==1) { // Point is in front of camera
         double rotX = nX * Math.cos(yaw) - nZ * Math.sin(yaw);
         double rotZ = nX * Math.sin(yaw) + nZ * Math.cos(yaw);
         double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
@@ -526,104 +526,140 @@ class AnimatedObject {
     
     public void playAnimation(int Index) {
         if (Index >= 0 && Index < Animations.length) {
-            Animations[Index].runAnimation(0.1);
+            Animations[Index].runAnimation(1);
         }
     }
 }
 class Animation {
-    GameObject[] KEY;
-    vec3[][] AnimPaths;
+    private final GameObject[] KEY;
+    private final vec3[][] AnimPaths;
     private int currentFrame = 0;
     private long lastUpdateTime = 0;
-    private boolean looping = false; 
+    private boolean looping = false;
     private boolean animationFinished = false;
-   
-    private double[] interpolationProgress;
-    
+
+    private final double[] interpolationProgress;
+
     public Animation(GameObject[] KEY, vec3[][] AnimPaths) {
+        
         this.KEY = KEY;
         this.AnimPaths = AnimPaths;
-        looping = false; 
-       
         this.interpolationProgress = new double[KEY.length];
         for (int i = 0; i < KEY.length; i++) {
             interpolationProgress[i] = 0.0;
         }
+
+       
+        this.lastUpdateTime = System.currentTimeMillis();
     }
-    
+
     public boolean isLooping() {
         return looping;
     }
-    
+
     public void setLooping(boolean looping) {
         this.looping = looping;
     }
-    
-    public double lerp(double a, double b, double t) {
+
+    private double lerp(double a, double b, double t) {
         return a + (b - a) * t;
     }
+
     
     public void runAnimation(double speed) {
         if (animationFinished && !looping) {
             return;
         }
-        
-        if (KEY.length != AnimPaths.length) {
-            System.out.println("Error: KEY and AnimPaths arrays must have the same length");
-            return;
+        if (speed <= 0.0) {
+            throw new IllegalArgumentException("speed must be > 0 (seconds per segment)");
         }
-        
+
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastUpdateTime < 100) { 
+        double deltaTime = (currentTime - lastUpdateTime) / 1000.0; // seconds
+        lastUpdateTime = currentTime;
+
+        // Throttle updates to ~60 FPS (16 ms). If deltaTime is very small, skip this frame.
+        if (deltaTime < 0.016) {
             return;
         }
-        lastUpdateTime = currentTime;
-        
+
         boolean allReachedTarget = true;
-        
+
         for (int i = 0; i < KEY.length; i++) {
-            if (currentFrame < AnimPaths[i].length) {
-                vec3 target = AnimPaths[i][currentFrame];
-                vec3 start = (currentFrame == 0) ? 
-                    new vec3(KEY[i].cx, KEY[i].cy, KEY[i].cz, KEY[i].theta, KEY[i].phi) :
-                    AnimPaths[i][currentFrame - 1];
-                
-               
-                interpolationProgress[i] += speed;
-                if (interpolationProgress[i] > 1.0) {
-                    interpolationProgress[i] = 1.0;
-                }
-                
-               
-                KEY[i].cx = lerp(start.x, target.x, interpolationProgress[i]);
-                KEY[i].cy = lerp(start.y, target.y, interpolationProgress[i]);
-                KEY[i].cz = lerp(start.z, target.z, interpolationProgress[i]);
-                KEY[i].theta = lerp(start.u, target.u, interpolationProgress[i]);
-                KEY[i].phi = lerp(start.v, target.v, interpolationProgress[i]);
-                
-                
-                if (interpolationProgress[i] < 1.0) {
-                    allReachedTarget = false;
-                }
+            // If this key has no path, skip it
+            if (AnimPaths[i] == null || AnimPaths[i].length == 0) {
+                continue;
+            }
+
+            // If currentFrame is beyond this key's path, treat it as reached
+            if (currentFrame >= AnimPaths[i].length) {
+                continue;
+            }
+
+            vec3 target = AnimPaths[i][currentFrame];
+            vec3 start = (currentFrame == 0)
+                    ? new vec3(KEY[i].cx, KEY[i].cy, KEY[i].cz, KEY[i].theta, KEY[i].phi)
+                    : AnimPaths[i][currentFrame - 1];
+
+            // progress increases based on time and the configured speed (seconds per segment)
+            interpolationProgress[i] += deltaTime / speed;
+            if (interpolationProgress[i] > 1.0) {
+                interpolationProgress[i] = 1.0;
+            }
+
+            KEY[i].cx = lerp(start.x, target.x, interpolationProgress[i]);
+            KEY[i].cy = lerp(start.y, target.y, interpolationProgress[i]);
+            KEY[i].cz = lerp(start.z, target.z, interpolationProgress[i]);
+            KEY[i].theta = lerp(start.u, target.u, interpolationProgress[i]);
+            KEY[i].phi = lerp(start.v, target.v, interpolationProgress[i]);
+
+            if (interpolationProgress[i] < 1.0) {
+                allReachedTarget = false;
             }
         }
-        
-      
+
         if (allReachedTarget) {
-            
-            for (int i = 0; i < KEY.length; i++) {
+            // Advance frame only if there is at least one key with a path length > currentFrame
+            boolean anyHasNext = false;
+            for (int i = 0; i < AnimPaths.length; i++) {
+                if (AnimPaths[i] != null && AnimPaths[i].length > currentFrame + 1) {
+                    anyHasNext = true;
+                    break;
+                }
+            }
+
+            // Reset progress for all keys (ready for next segment)
+            for (int i = 0; i < interpolationProgress.length; i++) {
                 interpolationProgress[i] = 0.0;
             }
-            
+
             if (looping) {
-                currentFrame = (currentFrame + 1) % AnimPaths[0].length;
+                // Advance frame and wrap around based on the maximum path length among keys
+                int maxLen = 0;
+                for (vec3[] path : AnimPaths) {
+                    if (path != null && path.length > maxLen) {
+                        maxLen = path.length;
+                    }
+                }
+                if (maxLen > 0) {
+                    currentFrame = (currentFrame + 1) % maxLen;
+                }
             } else {
-                if (currentFrame < AnimPaths[0].length - 1) {
+                // If any key has a next frame, advance; otherwise finish animation
+                if (anyHasNext) {
                     currentFrame++;
                 } else {
                     animationFinished = true;
                 }
             }
         }
+    }
+
+    public boolean isFinished() {
+        return animationFinished;
+    }
+
+    public int getCurrentFrame() {
+        return currentFrame;
     }
 }
