@@ -232,7 +232,7 @@ protected void paintComponent(Graphics g) {
                         int rgb = texture.getRGB(texX, texY);
                         Color texColor = new Color(rgb);
                       
-                        if (colorOffsetR < 0 || colorOffsetG < 0 || colorOffsetB < 0) {
+                        if (colorOffsetR < -255 || colorOffsetG < -255 || colorOffsetB < -255) {
                           
                             g2d.setColor(Color.BLACK);
                         } else {
