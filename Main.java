@@ -63,7 +63,7 @@ class dP extends JPanel {
     boolean debug = false;
     BufferedImage texture1;
     spawner sp;
-    float alpha = 0.5f;
+   
     
    
     Objloader loader = new Objloader();
@@ -147,18 +147,18 @@ protected void paintComponent(Graphics g) {
             if (obj != null) {
                 mesh currentMesh = obj.getMesh(0);
                 if (currentMesh != null) {
-                    drawMesh(currentMesh, g2d, texture1);
+                    drawMesh(currentMesh, g2d, texture1,0.5f,0,0,0);
                 }
             }
         }
 }
     //No edits past here! >:(
-   public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
+   public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture, float alpha,int colorOffsetR,int colorOffsetG,int colorOffsetB) {
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
         Collections.addAll(sortedTris, strip);
     }
-
+    
     // Sort triangles by average Z depth (back-to-front)
     sortedTris.sort((a, b) -> {
         double za = (a.v1.z + a.v2.z + a.v3.z) / 3.0;
@@ -227,13 +227,26 @@ protected void paintComponent(Graphics g) {
                     int texX = (int)(u * texture.getWidth());
                     int texY = (int)(v * texture.getHeight());
 
+                  
                     if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
                         int rgb = texture.getRGB(texX, texY);
                         Color texColor = new Color(rgb);
-                        int r = (int)(texColor.getRed() * intensity);
-                        int g = (int)(texColor.getGreen() * intensity);
-                        int b = (int)(texColor.getBlue() * intensity);
-                        g2d.setColor(new Color(clamp(r), clamp(g), clamp(b)));
+                      
+                        if (colorOffsetR < 0 || colorOffsetG < 0 || colorOffsetB < 0) {
+                          
+                            g2d.setColor(Color.BLACK);
+                        } else {
+                            
+                            int r = (int)(texColor.getRed() * intensity) + colorOffsetR;
+                            int g = (int)(texColor.getGreen() * intensity) + colorOffsetG;
+                            int b = (int)(texColor.getBlue() * intensity) + colorOffsetB;
+                            
+                            r = Math.max(0, Math.min(255, r));
+                            g = Math.max(0, Math.min(255, g));
+                            b = Math.max(0, Math.min(255, b));
+                            
+                            g2d.setColor(new Color(r, g, b));
+                        }
                         g2d.drawLine(x, y, x, y);
                     }
                 }
