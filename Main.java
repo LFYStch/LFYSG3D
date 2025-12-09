@@ -50,11 +50,8 @@ public class Main implements KeyListener {
 
 class dP extends JPanel {
     
-    private AnimatedObject animatedCube;
-    private boolean animationPlaying = false;
+    
    
-    private GameObject cube1;
-    private GameObject cube2;
     public Graphics2D g2d;
     vec3 cam;
     double camYaw, camPitch;
@@ -63,6 +60,7 @@ class dP extends JPanel {
     boolean debug = false;
     BufferedImage texture1;
     spawner sp;
+    KeyFrame ArmAnim;
    
     
    
@@ -77,7 +75,7 @@ class dP extends JPanel {
         camPitch = 0;
         loadTextures();
         sp = new spawner();
-        this.setupExample();
+        ArmAnim = this.makeArm();
     }
 
     public void loadTextures() {
@@ -89,68 +87,52 @@ class dP extends JPanel {
             e.printStackTrace();
         }
     }
+    GameObject shoulder = new GameObject(new mesh[]{loader.load("Cube.obj",0,0,20,0.5,0.5,0.5)},0,0,0,0,0,null);
+    GameObject UPA = new GameObject(new mesh[]{loader.load("Cube.obj",0,10,20,0.5,0.5,0.5)},0,0,0,0,0,shoulder);
+    GameObject LRA = new GameObject(new mesh[]{loader.load("Cube.obj",0,20,20,0.5,0.5,0.5)},0,0,0,0,0,UPA);
     
+    public KeyFrame makeArm(){  
     
-   public void setupExample() {
-    
-    cube1 = new GameObject(
-        new mesh[]{
-            loader.load("Cube.obj", 0, 0, 20, 0.1, 0.1, 0.5)
-        },
-        new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)),
-        0, 0, -5, 0, 0  
-    );
-
-    cube2 = new GameObject(
-        new mesh[]{
-            loader.load("Cube.obj", 0, 0, 20, 0.1, 0.1, 0.5)
-        },
-        new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)),
-        0, 0, 5, 0, 0   
-    );
-
-   
-    vec3[][] animPaths = new vec3[2][];
-    
-    
-    animPaths[0] = new vec3[]{
-        new vec3(-3, -2, 20, 0, 0),
-        new vec3(-3, 2, 20, Math.PI, 0),
-        new vec3(-3, -2, 20, 2*Math.PI, 0)
+    vec3[][] animPaths = new vec3[3][];
+     animPaths[0] = new vec3[]{
+        new vec3(10, 0, 20, 0, 0),
+         new vec3(10, 0, 20, 0, 0),
+         new vec3(10, 0, 20, 0, 0)
+        
     };
     
     
     animPaths[1] = new vec3[]{
-        new vec3(3, -2, 20, 0, 0),
-        new vec3(3, 2, 20, Math.PI, 0),
-        new vec3(3, -2, 20, 2*Math.PI, 0)
+        new vec3(-5, 10, 20, 0, 0),    
+        new vec3(-5, 10, 20, 0, Math.toRadians(-30)),  
+        new vec3(-5, 10, 20, 0, Math.toRadians(30))
     };
-
-    Animation combinedAnimation = new Animation(
-        new GameObject[]{cube1, cube2}, 
-        animPaths
+    
+    
+    animPaths[2] = new vec3[]{
+        new vec3(-5, 20, 20, 0, 0),    
+        new vec3(-5, 20, 20, 0, Math.toRadians(-30)),  
+        new vec3(-5, 20, 20, 0, Math.toRadians(30))  
+    };
+    KeyFrame kf = new KeyFrame(
+        new GameObject[]{shoulder, UPA, LRA}, 
+        animPaths  
     );
-
-    animatedCube = new AnimatedObject(
-        new Animation[]{combinedAnimation},
-        new GameObject[]{cube1, cube2}
-    );
-}
+    kf.setFrameDuration(0.4); 
+    return kf;
+} 
+    
     //Main drawloop starts here! :)
     @Override
 protected void paintComponent(Graphics g) {
     super.paintComponent(g);
     g2d = (Graphics2D) g;
-    
+    ArmAnim.runAnimation(0.1);
+    drawMesh(shoulder.getMesh(0),g2d,texture1,0.5f,257,0,0);
+    drawMesh(UPA.getMesh(0),g2d,texture1,0.5f,0,257,0);
+    drawMesh(LRA.getMesh(0),g2d,texture1,0.5f,0,0,257);
     // Draw all animated objects
-    for (GameObject obj : animatedCube.Objects) {
-            if (obj != null) {
-                mesh currentMesh = obj.getMesh(0);
-                if (currentMesh != null) {
-                    drawMesh(currentMesh, g2d, texture1,0.5f,0,0,0);
-                }
-            }
-        }
+    
 }
     //No edits past here! >:(
    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture, float alpha,int colorOffsetR,int colorOffsetG,int colorOffsetB) {
@@ -231,15 +213,16 @@ protected void paintComponent(Graphics g) {
                     if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
                         int rgb = texture.getRGB(texX, texY);
                         Color texColor = new Color(rgb);
-                      
+                        
                         if (colorOffsetR < -254 || colorOffsetG < -254 || colorOffsetB < -254) {
                           
                             g2d.setColor(Color.BLACK);
                         } else {
                             
-                            int r = (int)(texColor.getRed() * intensity) + colorOffsetR;
-                            int g = (int)(texColor.getGreen() * intensity) + colorOffsetG;
+                             int r = (int)(texColor.getRed() * intensity) + colorOffsetR;
+                             int g = (int)(texColor.getGreen() * intensity) + colorOffsetG;
                             int b = (int)(texColor.getBlue() * intensity) + colorOffsetB;
+                            
                             
                             r = Math.max(0, Math.min(255, r));
                             g = Math.max(0, Math.min(255, g));
@@ -278,7 +261,7 @@ public void update(){
     }
     totalTris = 0;
 
-    animatedCube.playAnimation(0);
+   
 
 
 }
@@ -307,7 +290,7 @@ class vec3 {
     double nZ = this.z - cam.z;
     double dot  = (cam.nx * nX) + (cam.ny * nY) + (cam.nz * nZ);
 
-    if (1==1) { // Point is in front of camera
+    if (dot <= 0.9) { // Point is in front of camera
         double rotX = nX * Math.cos(yaw) - nZ * Math.sin(yaw);
         double rotZ = nX * Math.sin(yaw) + nZ * Math.cos(yaw);
         double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
@@ -356,13 +339,7 @@ class spawner {
     Objloader loader = new Objloader();
 
     
-    public mesh LFYS(double x, double y, double z, int aI, double theta, double psi) {
     
-    GameObject LFYS = new GameObject(new mesh[]{
-        loader.load("Cube.obj",x,y,z,1,1,1)
-    }, new AABB(new vec3(0, 0, 0, 0, 0), new vec3(0, 0, 0, 0, 0)), theta, psi, x, y, z);
-    return LFYS.getMesh(aI);
-}
 
 }
 
@@ -391,19 +368,36 @@ class AABB {
 
   class GameObject {
     mesh[] anims;
+    GameObject parent; 
+    ArrayList<GameObject> children;
     AABB hitbox;
     double theta, phi, cx, cy, cz;
 
-    public GameObject(mesh[] anims, AABB hitbox, double theta, double phi, double cx, double cy, double cz) {
+    public GameObject(mesh[] anims, double theta, double phi, double cx, double cy, double cz,GameObject root) {
         this.anims = anims;
-        this.hitbox = hitbox;
+        this.parent = root;
         this.theta = theta; // Y-axis rotation
         this.phi = phi;     // Z-axis rotation
         this.cx = cx;
         this.cy = cy;
         this.cz = cz;
     }
+    public vec3 getWP(){
+        if(parent == null){
+            return new vec3(cx,cy,cz,0,0);
+        } else {
+            vec3 pW = parent.getWP();
+	    double rotX = cx * Math.cos(parent.theta)-cz * Math.sin(parent.theta);
+	    double rotZ = cx * Math.sin(parent.theta)+cz * Math.cos(parent.theta);
+	    return new vec3(
+			    pW.x + rotX,
+			    pW.y + cy,
+			    pW.z + rotZ,
+			    0,0
+			   );
 
+        }
+    }
     public mesh getMesh(int AnimIndex) {
         mesh lfys = anims[AnimIndex];
 
@@ -528,151 +522,98 @@ class Objloader {
         return new mesh(new tri[][] { triangles.toArray(new tri[0]) });
     }
 }
-class AnimatedObject {
-    Animation[] Animations;
-    GameObject[] Objects;
-    
-    public AnimatedObject(Animation[] Animations, GameObject[] Objects) {
-        this.Animations = Animations;
-        this.Objects = Objects;
-    }
-    
-    public void playAnimation(int Index) {
-        if (Index >= 0 && Index < Animations.length) {
-            Animations[Index].runAnimation(1);
-        }
-    }
-}
-class Animation {
-    private final GameObject[] KEY;
-    private final vec3[][] AnimPaths;
-    private int currentFrame = 0;
-    private long lastUpdateTime = 0;
-    private boolean looping = false;
-    private boolean animationFinished = false;
-
-    private final double[] interpolationProgress;
-
-    public Animation(GameObject[] KEY, vec3[][] AnimPaths) {
-        
-        this.KEY = KEY;
-        this.AnimPaths = AnimPaths;
-        this.interpolationProgress = new double[KEY.length];
-        for (int i = 0; i < KEY.length; i++) {
-            interpolationProgress[i] = 0.0;
-        }
-
-       
-        this.lastUpdateTime = System.currentTimeMillis();
-    }
-
-    public boolean isLooping() {
-        return looping;
-    }
-
-    public void setLooping(boolean looping) {
-        this.looping = looping;
-    }
-
-    private double lerp(double a, double b, double t) {
+class KeyFrame {
+    public double lerp(double a, double b, double t) {
         return a + (b - a) * t;
     }
-
     
-    public void runAnimation(double speed) {
-        if (animationFinished && !looping) {
-            return;
-        }
-        if (speed <= 0.0) {
-            throw new IllegalArgumentException("speed must be > 0 (seconds per segment)");
-        }
-
-        long currentTime = System.currentTimeMillis();
-        double deltaTime = (currentTime - lastUpdateTime) / 1000.0; // seconds
-        lastUpdateTime = currentTime;
-
-        // Throttle updates to ~60 FPS (16 ms). If deltaTime is very small, skip this frame.
-        if (deltaTime < 0.016) {
-            return;
-        }
-
-        boolean allReachedTarget = true;
-
-        for (int i = 0; i < KEY.length; i++) {
-            // If this key has no path, skip it
-            if (AnimPaths[i] == null || AnimPaths[i].length == 0) {
-                continue;
-            }
-
-            // If currentFrame is beyond this key's path, treat it as reached
-            if (currentFrame >= AnimPaths[i].length) {
-                continue;
-            }
-
-            vec3 target = AnimPaths[i][currentFrame];
-            vec3 start = (currentFrame == 0)
-                    ? new vec3(KEY[i].cx, KEY[i].cy, KEY[i].cz, KEY[i].theta, KEY[i].phi)
-                    : AnimPaths[i][currentFrame - 1];
-
-            // progress increases based on time and the configured speed (seconds per segment)
-            interpolationProgress[i] += deltaTime / speed;
-            if (interpolationProgress[i] > 1.0) {
-                interpolationProgress[i] = 1.0;
-            }
-
-            KEY[i].cx = lerp(start.x, target.x, interpolationProgress[i]);
-            KEY[i].cy = lerp(start.y, target.y, interpolationProgress[i]);
-            KEY[i].cz = lerp(start.z, target.z, interpolationProgress[i]);
-            KEY[i].theta = lerp(start.u, target.u, interpolationProgress[i]);
-            KEY[i].phi = lerp(start.v, target.v, interpolationProgress[i]);
-
-            if (interpolationProgress[i] < 1.0) {
-                allReachedTarget = false;
-            }
-        }
-
-        if (allReachedTarget) {
-            // Advance frame only if there is at least one key with a path length > currentFrame
-            boolean anyHasNext = false;
-            for (int i = 0; i < AnimPaths.length; i++) {
-                if (AnimPaths[i] != null && AnimPaths[i].length > currentFrame + 1) {
-                    anyHasNext = true;
-                    break;
-                }
-            }
-
-            // Reset progress for all keys (ready for next segment)
-            for (int i = 0; i < interpolationProgress.length; i++) {
-                interpolationProgress[i] = 0.0;
-            }
-
-            if (looping) {
-                // Advance frame and wrap around based on the maximum path length among keys
-                int maxLen = 0;
-                for (vec3[] path : AnimPaths) {
-                    if (path != null && path.length > maxLen) {
-                        maxLen = path.length;
-                    }
-                }
-                if (maxLen > 0) {
-                    currentFrame = (currentFrame + 1) % maxLen;
-                }
-            } else {
-                // If any key has a next frame, advance; otherwise finish animation
-                if (anyHasNext) {
-                    currentFrame++;
-                } else {
-                    animationFinished = true;
-                }
-            }
-        }
+    public vec3 lerpVec3(vec3 a, vec3 b, double t) {
+        return new vec3(
+            lerp(a.x, b.x, t),
+            lerp(a.y, b.y, t),
+            lerp(a.z, b.z, t),
+            lerp(a.u, b.u, t),
+            lerp(a.v, b.v, t)
+        );
     }
-
+    
+    GameObject[] KEY; 
+    vec3[][] AnimIndexforAnim; 
+    private double animationTime = 0;
+    private int currentFrame = 0;
+    private boolean looping = true;
+    private double frameDuration = 0.5; 
+    public KeyFrame(GameObject[] KEY, vec3[][] AnimIndexforAnim) {
+        this.KEY = KEY;
+        this.AnimIndexforAnim = AnimIndexforAnim;
+    }
+    
+    public void runAnimation(double deltaTime) {
+        animationTime += deltaTime;
+        
+    
+        int nextFrame = (currentFrame + 1) % AnimIndexforAnim[0].length;
+      
+        if (animationTime >= frameDuration) {
+            currentFrame = nextFrame;
+            nextFrame = (currentFrame + 1) % AnimIndexforAnim[0].length;
+            animationTime = 0;
+            
+           
+            if (!looping && currentFrame == AnimIndexforAnim[0].length - 1) {
+                return;
+            }
+        }
+        
+       
+        double t = animationTime / frameDuration;
+        t = Math.max(0, Math.min(1, t));
+        
+      
+        for (int objectIndex = 0; objectIndex < KEY.length; objectIndex++) {
+            if (KEY[objectIndex] != null && objectIndex < AnimIndexforAnim.length) {
+                animateObject(objectIndex, currentFrame, nextFrame, t);
+            }
+        }
+        for (GameObject obj : KEY) {
+    if (obj.parent != null) {               
+        obj.cx += obj.parent.cx * 0.5;  
+        obj.cy += obj.parent.cy * 0.5;
+    }
+}
+    }
+    
+    private void animateObject(int objectIndex, int currentFrame, int nextFrame, double t) {
+        
+        vec3 currentPos = AnimIndexforAnim[objectIndex][currentFrame];
+        vec3 nextPos = AnimIndexforAnim[objectIndex][nextFrame];
+        
+        
+        vec3 newPos = lerpVec3(currentPos, nextPos, t);
+        
+       
+        GameObject obj = KEY[objectIndex];
+        obj.cx = newPos.x; 
+        obj.cy = newPos.y;   
+        obj.cz = newPos.z;  
+        obj.theta = newPos.u;
+        obj.phi = newPos.v;   
+    }
+    
+    public void reset() {
+        animationTime = 0;
+        currentFrame = 0;
+    }
+    
+    public void setLooping(boolean loop) {
+        this.looping = loop;
+    }
+    
+    public void setFrameDuration(double duration) {
+        this.frameDuration = duration;
+    }
+    
     public boolean isFinished() {
-        return animationFinished;
-    }
-
-    public int getCurrentFrame() {
-        return currentFrame;
+        return !looping && currentFrame == AnimIndexforAnim[0].length - 1;
     }
 }
