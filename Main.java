@@ -368,11 +368,7 @@ class AABB {
 
     public GameObject(mesh[] anims, double theta, double phi, double cx, double cy, double cz,GameObject parent) {
         this.anims = anims;
-        this.lt = theta;
-        this.lp = phi;
-        this.lx = cx;
-        this.ly = cy;
-        this.lz = cz;
+        
         this.theta = theta; // Y-axis rotation
         this.phi = phi;     // Z-axis rotation
         this.cx = cx;
@@ -382,11 +378,11 @@ class AABB {
     public mesh getMesh(int AnimIndex) {
         mesh lfys = anims[AnimIndex];
         if(parent != null){
-            cx=parent.cx+lx;
-            cy=parent.cy+ly;
-            cz=parent.cz+lz;
-            theta=parent.theta+lt;
-            phi=parent.phi+lp;
+            cx=parent.cx+cx;
+            cy=parent.cy+cy;
+            cz=parent.cz+cz;
+            theta=parent.theta+theta;
+            phi=parent.phi+phi;
         }
         for (tri[] row : lfys.tris) {
             for (tri t : row) {
