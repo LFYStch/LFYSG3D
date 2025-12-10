@@ -61,7 +61,7 @@ class dP extends JPanel {
     BufferedImage texture1;
     spawner sp;
     KeyFrame ArmAnim;
-   
+    GameObject shoulder,UPA,LRA;
     
    
     Objloader loader = new Objloader();
@@ -75,9 +75,39 @@ class dP extends JPanel {
         camPitch = 0;
         loadTextures();
         sp = new spawner();
+        shoulder = new GameObject(new mesh[]{loader.load("Cube.obj",0,0,20,0.25,0.5,0.5)},0,0,0,0,0,null);
+        UPA = new GameObject(new mesh[]{loader.load("Cube.obj",0,10,20,0.25,0.5,0.5)},0,0,0,0,0,shoulder);
+        LRA = new GameObject(new mesh[]{loader.load("Cube.obj",0,20,20,0.25,0.5,0.5)},0,0,0,0,0,UPA);
         ArmAnim = this.makeArm();
     }
-
+    public KeyFrame makeArm() {  
+        vec3[][] animPaths = new vec3[3][];
+        animPaths[0] = new vec3[]{
+           
+            new vec3(0, 0, 20, 0, 0),                     
+            new vec3(0, 0, 20, 0, Math.toRadians(10)),     
+            new vec3(0, 0, 20, 0, Math.toRadians(-10))                    
+                            
+    };
+    
+    animPaths[1] = new vec3[]{
+       
+        new vec3(0, 10, 20, 0, 0),             
+        new vec3(0, -3, 20, 0, Math.toRadians(45)),     
+        new vec3(0, -3, 20, 0, Math.toRadians(-45))                  
+    };
+    
+    animPaths[2] = new vec3[]{
+        
+        new vec3(0, 10, 20, 0, 0),               
+        new vec3(0, -7, 20, 0, Math.toRadians(45)),     
+        new vec3(0, -7, 20, 0, Math.toRadians(-45))                    
+    };
+    
+        KeyFrame kf = new KeyFrame(new GameObject[]{shoulder, UPA, LRA}, animPaths);
+        kf.setFrameDuration(0.4);
+        return kf;
+    }
     public void loadTextures() {
         try {
             texture1 = ImageIO.read(new File("dir.png"));
@@ -87,40 +117,7 @@ class dP extends JPanel {
             e.printStackTrace();
         }
     }
-    GameObject shoulder = new GameObject(new mesh[]{loader.load("Cube.obj",0,0,20,0.5,0.5,0.5)},0,0,0,0,0,null);
-    GameObject UPA = new GameObject(new mesh[]{loader.load("Cube.obj",0,10,20,0.5,0.5,0.5)},0,0,0,0,0,shoulder);
-    GameObject LRA = new GameObject(new mesh[]{loader.load("Cube.obj",0,20,20,0.5,0.5,0.5)},0,0,0,0,0,UPA);
     
-    public KeyFrame makeArm(){  
-    
-    vec3[][] animPaths = new vec3[3][];
-     animPaths[0] = new vec3[]{
-        new vec3(10, 0, 20, 0, 0),
-         new vec3(10, 0, 20, 0, 0),
-         new vec3(10, 0, 20, 0, 0)
-        
-    };
-    
-    
-    animPaths[1] = new vec3[]{
-        new vec3(-5, 10, 20, 0, 0),    
-        new vec3(-5, 10, 20, 0, Math.toRadians(-30)),  
-        new vec3(-5, 10, 20, 0, Math.toRadians(30))
-    };
-    
-    
-    animPaths[2] = new vec3[]{
-        new vec3(-5, 20, 20, 0, 0),    
-        new vec3(-5, 20, 20, 0, Math.toRadians(-30)),  
-        new vec3(-5, 20, 20, 0, Math.toRadians(30))  
-    };
-    KeyFrame kf = new KeyFrame(
-        new GameObject[]{shoulder, UPA, LRA}, 
-        animPaths  
-    );
-    kf.setFrameDuration(0.4); 
-    return kf;
-} 
     
     //Main drawloop starts here! :)
     @Override
@@ -131,9 +128,7 @@ protected void paintComponent(Graphics g) {
     drawMesh(shoulder.getMesh(0),g2d,texture1,0.5f,257,0,0);
     drawMesh(UPA.getMesh(0),g2d,texture1,0.5f,0,257,0);
     drawMesh(LRA.getMesh(0),g2d,texture1,0.5f,0,0,257);
-    // Draw all animated objects
-    
-}
+    }
     //No edits past here! >:(
    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture, float alpha,int colorOffsetR,int colorOffsetG,int colorOffsetB) {
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
@@ -213,16 +208,15 @@ protected void paintComponent(Graphics g) {
                     if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
                         int rgb = texture.getRGB(texX, texY);
                         Color texColor = new Color(rgb);
-                        
+                      
                         if (colorOffsetR < -254 || colorOffsetG < -254 || colorOffsetB < -254) {
                           
                             g2d.setColor(Color.BLACK);
                         } else {
                             
-                             int r = (int)(texColor.getRed() * intensity) + colorOffsetR;
-                             int g = (int)(texColor.getGreen() * intensity) + colorOffsetG;
+                            int r = (int)(texColor.getRed() * intensity) + colorOffsetR;
+                            int g = (int)(texColor.getGreen() * intensity) + colorOffsetG;
                             int b = (int)(texColor.getBlue() * intensity) + colorOffsetB;
-                            
                             
                             r = Math.max(0, Math.min(255, r));
                             g = Math.max(0, Math.min(255, g));
@@ -368,39 +362,28 @@ class AABB {
 
   class GameObject {
     mesh[] anims;
-    GameObject parent; 
-    ArrayList<GameObject> children;
+    GameObject parent;
     AABB hitbox;
     double theta, phi, cx, cy, cz;
 
-    public GameObject(mesh[] anims, double theta, double phi, double cx, double cy, double cz,GameObject root) {
+    public GameObject(mesh[] anims, double theta, double phi, double cx, double cy, double cz,GameObject parent) {
         this.anims = anims;
-        this.parent = root;
+      
         this.theta = theta; // Y-axis rotation
         this.phi = phi;     // Z-axis rotation
         this.cx = cx;
         this.cy = cy;
         this.cz = cz;
     }
-    public vec3 getWP(){
-        if(parent == null){
-            return new vec3(cx,cy,cz,0,0);
-        } else {
-            vec3 pW = parent.getWP();
-	    double rotX = cx * Math.cos(parent.theta)-cz * Math.sin(parent.theta);
-	    double rotZ = cx * Math.sin(parent.theta)+cz * Math.cos(parent.theta);
-	    return new vec3(
-			    pW.x + rotX,
-			    pW.y + cy,
-			    pW.z + rotZ,
-			    0,0
-			   );
-
-        }
-    }
     public mesh getMesh(int AnimIndex) {
         mesh lfys = anims[AnimIndex];
-
+        if(parent != null){
+            cx+=parent.cx;
+            cy+=parent.cy;
+            cz+=parent.cz;
+            theta+=parent.theta;
+            phi+=parent.phi;
+        }
         for (tri[] row : lfys.tris) {
             for (tri t : row) {
                 for (vec3 v : new vec3[]{t.v1, t.v2, t.v3}) {
@@ -575,14 +558,8 @@ class KeyFrame {
                 animateObject(objectIndex, currentFrame, nextFrame, t);
             }
         }
-        for (GameObject obj : KEY) {
-    if (obj.parent != null) {               
-        obj.cx += obj.parent.cx * 0.5;  
-        obj.cy += obj.parent.cy * 0.5;
-    }
-}
-    }
-    
+        }
+        
     private void animateObject(int objectIndex, int currentFrame, int nextFrame, double t) {
         
         vec3 currentPos = AnimIndexforAnim[objectIndex][currentFrame];
