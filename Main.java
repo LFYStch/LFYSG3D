@@ -51,7 +51,7 @@ public class Main implements KeyListener {
 class dP extends JPanel {
     
     
-   
+    public int deltaTime;
     public Graphics2D g2d;
     vec3 cam;
     double camYaw, camPitch;
@@ -247,11 +247,11 @@ double[] computeBarycentric(double x1, double y1, double x2, double y2, double x
 }
 public void update(){
   repaint();
-  
+    deltaTime++;
     if(debug){
         
         System.out.print("\033[1A");
-        System.out.println(totalTris + "\r");
+        System.out.println(totalTris + " deltaTime: " + deltaTime + "\r");
     }
     totalTris = 0;
 
