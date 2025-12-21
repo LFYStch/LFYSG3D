@@ -363,68 +363,85 @@ class AABB {
   class GameObject {
     mesh[] anims;
     GameObject parent;
-    AABB hitbox;
-    double theta, phi, cx, cy, cz,lt,lp,lx,ly,lz;
 
-    public GameObject(mesh[] anims, double theta, double phi, double cx, double cy, double cz,GameObject parent) {
+    double lx, ly, lz;
+    double ry, rz;
+
+    public GameObject(mesh[] anims,
+                      double ry, double rz,
+                      double lx, double ly, double lz,
+                      GameObject parent) {
         this.anims = anims;
-        
-        this.theta = theta; // Y-axis rotation
-        this.phi = phi;     // Z-axis rotation
-        this.cx = cx;
-        this.cy = cy;
-        this.cz = cz;
+        this.ry = ry;
+        this.rz = rz;
+        this.lx = lx;
+        this.ly = ly;
+        this.lz = lz;
+        this.parent = parent;
     }
-    public mesh getMesh(int AnimIndex) {
-        mesh lfys = anims[AnimIndex];
-        if(parent != null){
-            cx=parent.cx+cx;
-            cy=parent.cy+cy;
-            cz=parent.cz+cz;
-            theta=parent.theta+theta;
-            phi=parent.phi+phi;
+
+    private Transform world() {
+        if (parent == null) {
+            return new Transform(lx, ly, lz, ry, rz);
         }
-        for (tri[] row : lfys.tris) {
-            for (tri t : row) {
-                for (vec3 v : new vec3[]{t.v1, t.v2, t.v3}) {
-                    
-                    double x = v.x - cx;
-                    double y = v.y - cy;
-                    double z = v.z - cz;
-                     double nx = v.nx;
-                    double ny = v.ny;
-                    double nz = v.nz;
-                    // Y-axis rotation (around vertical axis)
-                    double x1 = x * Math.cos(theta) - z * Math.sin(theta);
-                    double z1 = x * Math.sin(theta) + z * Math.cos(theta);
-                    
-                    double nx1 = nx * Math.cos(theta) - nz * Math.sin(theta);
-                    double nz1 = nx * Math.sin(theta) + nz * Math.cos(theta);
-                    
-                    // Z-axis rotation (phi)
-                    double nx2 = nx1 * Math.cos(phi) - ny * Math.sin(phi);
-                    double ny2 = nx1 * Math.sin(phi) + ny * Math.cos(phi);
+        Transform p = parent.world();
+        return new Transform(
+            p.x + lx,
+            p.y + ly,
+            p.z + lz,
+            p.ry + ry,
+            p.rz + rz
+        );
+    }
 
-                    // Z-axis rotation (around forward axis)
-                    double x2 = x1 * Math.cos(phi) - y * Math.sin(phi);
-                    double y2 = x1 * Math.sin(phi) + y * Math.cos(phi);
+    public mesh getMesh(int i) {
+        mesh src = anims[i];
+        Transform t = world();
 
-                    // Translate back
-                    
-                    v.x = x2 + cx;
-                    v.y = y2 + cy;
-                    v.z = z1 + cz;
-                    v.nx = nx2;
-                    v.ny = ny2;
-                    v.nz = nz1;
-                    // Translate to origin
-                    
-                    
-                }
+        tri[][] out = new tri[src.tris.length][];
+        for (int r = 0; r < src.tris.length; r++) {
+            out[r] = new tri[src.tris[r].length];
+            for (int c = 0; c < src.tris[r].length; c++) {
+                tri tr = src.tris[r][c];
+                out[r][c] = new tri(
+                    apply(tr.v1, t),
+                    apply(tr.v2, t),
+                    apply(tr.v3, t)
+                );
             }
         }
+        return new mesh(out);
+    }
 
-        return lfys;
+    private vec3 apply(vec3 v, Transform t) {
+        double x = v.x;
+        double y = v.y;
+        double z = v.z;
+
+        double x1 = x * Math.cos(t.ry) - z * Math.sin(t.ry);
+        double z1 = x * Math.sin(t.ry) + z * Math.cos(t.ry);
+
+        double x2 = x1 * Math.cos(t.rz) - y * Math.sin(t.rz);
+        double y2 = x1 * Math.sin(t.rz) + y * Math.cos(t.rz);
+
+        vec3 o = v.copy();
+        o.x = x2 + t.x;
+        o.y = y2 + t.y;
+        o.z = z1 + t.z;
+        return o;
+    }
+}
+
+class Transform {
+    double x, y, z;
+    double ry, rz;
+
+    Transform(double x, double y, double z, double ry, double rz) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.ry = ry;
+        this.rz = rz;
     }
 }
 
@@ -570,11 +587,11 @@ class KeyFrame {
         
        
         GameObject obj = KEY[objectIndex];
-        obj.cx = newPos.x; 
-        obj.cy = newPos.y;   
-        obj.cz = newPos.z;  
-        obj.theta = newPos.u;
-        obj.phi = newPos.v;   
+        obj.lx = newPos.x;
+        obj.ly = newPos.y;
+        obj.lz = newPos.z;
+        obj.ry = newPos.u;
+        obj.rz = newPos.v;
     }
     
     public void reset() {
