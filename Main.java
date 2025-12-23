@@ -381,17 +381,25 @@ class AABB {
     }
 
     private Transform world() {
-        if (parent == null) {
-            return new Transform(lx, ly, lz, ry, rz);
-        }
-        Transform p = parent.world();
-        return new Transform(
-            p.x + lx,
-            p.y + ly,
-            p.z + lz,
-            p.ry + ry,
-            p.rz + rz
-        );
+    if (parent == null) {
+        return new Transform(lx, ly, lz, ry, rz);
+    }
+
+    Transform p = parent.world();
+
+    double cosY = Math.cos(p.ry);
+    double sinY = Math.sin(p.ry);
+
+    double rx = lx * cosY - lz * sinY;
+    double rz = lx * sinY + lz * cosY;
+
+    return new Transform(
+        p.x + rx,
+        p.y + ly,
+        p.z + rz,
+        p.ry + ry,
+        p.rz + rz
+    );
     }
 
     public mesh getMesh(int i) {
