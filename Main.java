@@ -390,17 +390,18 @@ class AABB {
     double cosY = Math.cos(p.ry);
     double sinY = Math.sin(p.ry);
 
-    double rx = lx * cosY - lz * sinY;
-    double rz = lx * sinY + lz * cosY;
+    double offX = lx * cosY - lz * sinY;
+    double offZ = lx * sinY + lz * cosY;
 
     return new Transform(
-        p.x + rx,
+        p.x + offX,
         p.y + ly,
-        p.z + rz,
+        p.z + offZ,
         p.ry + ry,
-        p.rz + rz
+        p.rz + this.rz 
     );
-    }
+}
+
 
     public mesh getMesh(int i) {
         mesh src = anims[i];
