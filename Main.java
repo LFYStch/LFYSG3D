@@ -62,7 +62,7 @@ class dP extends JPanel {
     spawner sp;
     KeyFrame ArmAnim;
     GameObject shoulder,UPA,LRA;
-    
+    float alpha = 0.5f;
    
     Objloader loader = new Objloader();
 
@@ -125,12 +125,12 @@ protected void paintComponent(Graphics g) {
     super.paintComponent(g);
     g2d = (Graphics2D) g;
     ArmAnim.runAnimation(0.1);
-    drawMesh(shoulder.getMesh(0),g2d,texture1,0.5f,257,0,0);
-    drawMesh(UPA.getMesh(0),g2d,texture1,0.5f,0,257,0);
-    drawMesh(LRA.getMesh(0),g2d,texture1,0.5f,0,0,257);
+    drawMesh(shoulder.getMesh(0),g2d,texture1,257,0,0);
+    drawMesh(UPA.getMesh(0),g2d,texture1,0,257,0);
+    drawMesh(LRA.getMesh(0),g2d,texture1,0,0,257);
     }
     //No edits past here! >:(
-   public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture, float alpha,int colorOffsetR,int colorOffsetG,int colorOffsetB) {
+   public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture, int colorOffsetR,int colorOffsetG,int colorOffsetB) {
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
         Collections.addAll(sortedTris, strip);
@@ -224,7 +224,7 @@ protected void paintComponent(Graphics g) {
                             
                             g2d.setColor(new Color(r, g, b));
                         }
-                        g2d.drawLine(x, y, x, y);
+                        g2d.fillRect(x, y, 1, 1);
                     }
                 }
             }
