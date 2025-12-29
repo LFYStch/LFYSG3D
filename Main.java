@@ -209,11 +209,7 @@ protected void paintComponent(Graphics g) {
                         int rgb = texture.getRGB(texX, texY);
                         Color texColor = new Color(rgb);
                       
-                        if (colorOffsetR < -254 || colorOffsetG < -254 || colorOffsetB < -254) {
-                          
-                            g2d.setColor(Color.BLACK);
-                        } else {
-                            
+                      
                             int r = (int)(texColor.getRed() * intensity);
                             int g = (int)(texColor.getGreen() * intensity);
                             int b = (int)(texColor.getBlue() * intensity);
@@ -223,7 +219,7 @@ protected void paintComponent(Graphics g) {
                             b = Math.max(0, Math.min(255, b));
                             
                             g2d.setColor(new Color(r, g, b));
-                        }
+                        
                         g2d.fillRect(x, y, 1, 1);
                     }
                 }
