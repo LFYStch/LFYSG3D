@@ -125,12 +125,12 @@ protected void paintComponent(Graphics g) {
     super.paintComponent(g);
     g2d = (Graphics2D) g;
     ArmAnim.runAnimation(0.1);
-    drawMesh(shoulder.getMesh(0),g2d,texture1,257,0,0);
-    drawMesh(UPA.getMesh(0),g2d,texture1,0,257,0);
-    drawMesh(LRA.getMesh(0),g2d,texture1,0,0,257);
+    drawMesh(shoulder.getMesh(0),g2d,texture1);
+    drawMesh(UPA.getMesh(0),g2d,texture1);
+    drawMesh(LRA.getMesh(0),g2d,texture1);
     }
     //No edits past here! >:(
-   public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture, int colorOffsetR,int colorOffsetG,int colorOffsetB) {
+   public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
         Collections.addAll(sortedTris, strip);
@@ -214,9 +214,9 @@ protected void paintComponent(Graphics g) {
                             g2d.setColor(Color.BLACK);
                         } else {
                             
-                            int r = (int)(texColor.getRed() * intensity) + colorOffsetR;
-                            int g = (int)(texColor.getGreen() * intensity) + colorOffsetG;
-                            int b = (int)(texColor.getBlue() * intensity) + colorOffsetB;
+                            int r = (int)(texColor.getRed() * intensity);
+                            int g = (int)(texColor.getGreen() * intensity);
+                            int b = (int)(texColor.getBlue() * intensity);
                             
                             r = Math.max(0, Math.min(255, r));
                             g = Math.max(0, Math.min(255, g));
