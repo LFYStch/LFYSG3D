@@ -63,6 +63,8 @@ class dP extends JPanel {
     KeyFrame ArmAnim;
     GameObject shoulder,UPA,LRA;
     float alpha = 0.5f;
+    //dis is 4 da save
+    int i = 1;
    
     Objloader loader = new Objloader();
 
@@ -622,11 +624,9 @@ class Save{
         
         try{
             BufferedWriter hjh = new BufferedWriter(new FileWriter("Save/s.ssm"));
-            hjh.write("<PlayerPosition>\n");
-            hjh.write(String.valueOf(d.player.px) + "\n");
-            hjh.write(String.valueOf(d.player.py) + "\n");
-            hjh.write(String.valueOf(d.player.pz) + "\n");
-            hjh.write("</PlayerPosition>\n");
+            hjh.write("<Something>\n");
+            hjh.write(String.valueOf(d.i) + "\n");
+            hjh.write("</Something>\n");
             hjh.close();
         } catch (IOException e) {
             System.err.println("Save failed.");
@@ -639,9 +639,9 @@ class Save{
             String line;
             while((line = br.readLine()) != null){
                 if(line.equals("<PlayerPosition>")){
-                    d.player.px = Double.parseDouble(br.readLine());
-                    d.player.py = Double.parseDouble(br.readLine());
-                    d.player.pz = Double.parseDouble(br.readLine());
+                    /* 
+                    whatever you want to load
+                        */
                 }
             }
             br.close();
