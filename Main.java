@@ -616,3 +616,38 @@ class KeyFrame {
         return !looping && currentFrame == AnimIndexforAnim[0].length - 1;
     }
 }
+class Save{
+  
+    public void makeSave(dP d){
+        
+        try{
+            BufferedWriter hjh = new BufferedWriter(new FileWriter("Save/s.ssm"));
+            hjh.write("<PlayerPosition>\n");
+            hjh.write(String.valueOf(d.player.px) + "\n");
+            hjh.write(String.valueOf(d.player.py) + "\n");
+            hjh.write(String.valueOf(d.player.pz) + "\n");
+            hjh.write("</PlayerPosition>\n");
+            hjh.close();
+        } catch (IOException e) {
+            System.err.println("Save failed.");
+            e.printStackTrace();
+    }
+}
+    public void loadSave(dP d){
+        try{
+            BufferedReader br = new BufferedReader(new FileReader("Save/s.ssm"));
+            String line;
+            while((line = br.readLine()) != null){
+                if(line.equals("<PlayerPosition>")){
+                    d.player.px = Double.parseDouble(br.readLine());
+                    d.player.py = Double.parseDouble(br.readLine());
+                    d.player.pz = Double.parseDouble(br.readLine());
+                }
+            }
+            br.close();
+        } catch (IOException e) {
+            System.err.println("This is not an error. This just signifies that you do NOT have a save file. Do not pannic! \n");
+            e.printStackTrace();
+    }
+}
+}
