@@ -21,6 +21,7 @@
      + Powershell
        ```powershell
          cd C:\Users\YourUsername\OneDrive\Desktop\LFYSG3D\
+         Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
          .\run.ps1
        ```
     
