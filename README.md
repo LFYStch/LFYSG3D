@@ -29,5 +29,7 @@
 # **Updates**
 + Updated GameObjects! Now with Animations!
 + Now with a save file format! .SSM (Simple Save Markup)
-
+# **Building**
++ If you want to make a build of your game for windows, here is a little [ai chat](https://copilot.microsoft.com/chats/uDiGeRFC37ttzryJrmgDG) that really helped me out (Please DONT add anything to the chat that is unnecesary) 
++ If you want to make a build for linux, then [this](https://copilot.microsoft.com/conversations/join/77xZuFuQwtjxSieuB3Xyv) is the link for you!
 **Have a Great Time!**
