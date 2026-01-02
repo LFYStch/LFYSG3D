@@ -435,6 +435,24 @@ class AABB {
         o.x = x2 + t.x;
         o.y = y2 + t.y;
         o.z = z1 + t.z;
+
+        // rotate normal
+        double nnx = v.nx;
+        double nny = v.ny;
+        double nnz = v.nz;
+        
+        // yaw rotation
+        double nnx1 = nnx * Math.cos(t.ry) - nnz * Math.sin(t.ry);
+        double nnz1 = nnx * Math.sin(t.ry) + nnz * Math.cos(t.ry);
+        
+        // pitch rotation
+        double nnx2 = nnx1 * Math.cos(t.rz) - nny * Math.sin(t.rz);
+        double nny2 = nnx1 * Math.sin(t.rz) + nny * Math.cos(t.rz);
+        
+        o.nx = nnx2;
+        o.ny = nny2;
+        o.nz = nnz1;
+
         return o;
     }
 }
