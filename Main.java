@@ -210,8 +210,8 @@ protected void paintComponent(Graphics g) {
                     else if (dot > 0.5) intensity = 0.6f;
                     else intensity = 0.3f;
 
-                    int texX = (int)(u * texture.getWidth());
-                    int texY = (int)(v * texture.getHeight());
+                    int texX = (int)(Math.max(0, Math.min(1, u)) * texture.getWidth());
+                    int texY = (int)(Math.max(0, Math.min(1, v)) * texture.getHeight());
 
                   
                     if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
@@ -295,7 +295,7 @@ class vec3 {
         double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
         double finalZ = nY * Math.sin(pitch) + rotZ * Math.cos(pitch);
 
-        double scale = 200 / Math.max(finalZ, 0.1);
+        double scale = 200 / Math.max(finalZ, 1.0);
         double screenCenterX = screenWidth / 2.0;
         double screenCenterY = screenHeight / 2.0;
 
