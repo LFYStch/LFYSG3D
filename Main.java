@@ -145,7 +145,7 @@ protected void paintComponent(Graphics g) {
         return Double.compare(zb, za);
     });
 
-    vec3 lightDir = new vec3(0, 0, -1, 0, 0); // Light from camera direction
+    vec3 lightDir = new vec3(0, 0, 1, 0, 0); // Light from camera direction
 
     for (tri t : sortedTris) {
         double nx = (t.v1.nx + t.v2.nx + t.v3.nx) / 3.0;
@@ -156,11 +156,18 @@ protected void paintComponent(Graphics g) {
         
         
 
+       double dirX = Math.sin(camYaw);
+        double dirY = Math.sin(camPitch);
+        double dirZ = Math.cos(camYaw);
+
+        vec3 camDir = new vec3(dirX, dirY, dirZ, 0, 0);
+
         // Dot product determines if face is visible
-        double dot = nx * cam.nx + ny * cam.ny + nz * cam.nz;
+        double dot = nx * camDir.x + ny * camDir.y + nz * camDir.z;
 
         // Only render faces pointing toward camera
-        if (dot > 0) continue;
+        // System.out.println(dot);
+        if (dot < 0) continue;
 
         totalTris+=1;
         vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
