@@ -133,6 +133,20 @@ protected void paintComponent(Graphics g) {
     }
     //No edits past here! >:(
    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
+    if(ts.type == 1){
+        tri t = ts.tris[0][0]; 
+
+        vec2 p1 = t.v1.project(cam, camYaw, camPitch, getWidth(), getHeight());
+        vec2 p3 = t.v3.project(cam, camYaw, camPitch, getWidth(), getHeight());
+
+        int sx = (int)p1.x;
+        int sy = (int)p1.y;
+        int sw = (int)(p3.x - p1.x);
+        int sh = (int)(p3.y - p1.y);
+
+        g2d.drawImage(texture, sx, sy, sw, sh, null);
+        return;
+    }
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
         Collections.addAll(sortedTris, strip);
@@ -163,11 +177,14 @@ protected void paintComponent(Graphics g) {
         vec3 camDir = new vec3(dirX, dirY, dirZ, 0, 0);
 
         // Dot product determines if face is visible
+        
         double dot = nx * camDir.x + ny * camDir.y + nz * camDir.z;
 
         // Only render faces pointing toward camera
         // System.out.println(dot);
-        if (dot < 0) continue;
+        if(ts.type != 2){
+            if (dot < 0) continue;
+        }
 
         totalTris+=1;
         vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
@@ -327,20 +344,15 @@ class tri {
 
 class mesh {
     tri[][] tris;
-    public mesh(tri[][] tris) {
+    int type;
+    public mesh(tri[][] tris, int type) {
         this.tris = tris;
+        this.type = type;
     }
 }
 
 
 
-class spawner {
-    Objloader loader = new Objloader();
-
-    
-    
-
-}
 
 
 class AABB {
@@ -551,7 +563,7 @@ class Objloader {
             System.err.println("OBJ load failed: " + e.getMessage());
         }
 
-        return new mesh(new tri[][] { triangles.toArray(new tri[0]) });
+        return new mesh(new tri[][] { triangles.toArray(new tri[0]) }, 0);
     }
 }
 class KeyFrame {
@@ -676,3 +688,61 @@ class Save{
     }
 }
 }
+class Billboard {
+    double x, y, z;
+    double width, height;
+    vec3 v1,v2,v3,v4;
+    public mesh tg;
+
+    public Billboard(double x, double y, double z, double width, double height) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.width = width;
+        this.height = height;
+        v1 = new vec3(0,0,0, 0,0);
+v2 = new vec3(0,0,0, 0,1);
+v3 = new vec3(0,0,0, 1,1);
+v4 = new vec3(0,0,0, 1,0);
+
+
+       tg = new mesh(new tri[][] {
+            {
+                new tri(
+                   v1, v2, v3
+                ),
+                new tri(
+                   v1,v3,v4
+                )
+            }
+        }, 1);
+    }
+    public void update(dP d) {
+
+    double dx = d.cam.x - x;
+    double dz = d.cam.z - z;
+    double theta = -Math.atan2(dx, dz);
+
+    double cos = Math.cos(theta);
+    double sin = Math.sin(theta);
+
+    double sWP = width  * 200 / Math.max(z - d.cam.z, 0.1);
+    double SHP = height * 200 / Math.max(z - d.cam.z, 0.1);
+
+    double lx = x - sWP * cos;
+    double lz = z - sWP * sin;
+    double rx = x + sWP * cos;
+    double rz = z + sWP * sin;
+
+    // update the quad vertices
+    v1.x = lx; v1.y = y - SHP; v1.z = lz;   // top-left
+v2.x = lx; v2.y = y + SHP; v2.z = lz;   // bottom-left
+v3.x = rx; v3.y = y + SHP; v3.z = rz;   // bottom-right
+v4.x = rx; v4.y = y - SHP; v4.z = rz;   // top-right
+
+
+}
+
+    
+
+    }
