@@ -213,14 +213,18 @@ protected void paintComponent(Graphics g) {
                     nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
                     ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
                     nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
-
+                    
                     double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
                     if (len > 0.0001) {
                         nx /= len;
                         ny /= len;
                         nz /= len;
                     }
-                    
+                    if (ts.type == 2) {
+                        nx = -nx;
+                        ny = -ny;
+                        nz = -nz;
+                    }
                     dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
                     float intensity;
                     if (dot > 0.95) intensity = 1.0f;
