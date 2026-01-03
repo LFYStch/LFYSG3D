@@ -132,6 +132,7 @@ protected void paintComponent(Graphics g) {
     drawMesh(LRA.getMesh(0),g2d,texture1);
     }
     //No edits past here! >:(
+    
    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
     if(ts.type == 1){
         tri t = ts.tris[0][0]; 
@@ -746,7 +747,4 @@ v4.x = rx; v4.y = y - SHP; v4.z = rz;   // top-right
 
 
 }
-
-    
-
-    }
+}
