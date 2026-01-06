@@ -136,7 +136,7 @@ protected void paintComponent(Graphics g) {
    public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
     if(ts.type == 1){
         tri t = ts.tris[0][0]; 
-
+        if(t.v1.z<cam.z) return;
         vec2 p1 = t.v1.project(cam, camYaw, camPitch, getWidth(), getHeight());
         vec2 p3 = t.v3.project(cam, camYaw, camPitch, getWidth(), getHeight());
 
@@ -144,8 +144,9 @@ protected void paintComponent(Graphics g) {
         int sy = (int)p1.y;
         int sw = (int)(p3.x - p1.x);
         int sh = (int)(p3.y - p1.y);
-
+        
         g2d.drawImage(texture, sx, sy, sw, sh, null);
+        
         return;
     }
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
@@ -160,7 +161,7 @@ protected void paintComponent(Graphics g) {
         return Double.compare(zb, za);
     });
 
-    vec3 lightDir = new vec3(0, 0, 1, 0, 0); // Light from camera direction
+    vec3 lightDir = new vec3(0,0,1,0, 0);
 
     for (tri t : sortedTris) {
         double nx = (t.v1.nx + t.v2.nx + t.v3.nx) / 3.0;
@@ -169,28 +170,25 @@ protected void paintComponent(Graphics g) {
 
         // Calculate vector from camera to face center
         
+           
+            vec3 camDir = new vec3(
+                Math.sin(camYaw),
+                Math.sin(camPitch),
+                Math.cos(camYaw),
+                0, 0
+            );
+            // Dot product determines if face is visible
+            if(ts.type!=2){
+                double dot = nx * camDir.x  + nz * camDir.z;
+                if (dot < 0) continue;
+            }
+
+            
         
-
-       double dirX = Math.sin(camYaw);
-        double dirY = Math.sin(camPitch);
-        double dirZ = Math.cos(camYaw);
-
-        vec3 camDir = new vec3(dirX, dirY, dirZ, 0, 0);
-
-        // Dot product determines if face is visible
-        
-        double dot = nx * camDir.x + ny * camDir.y + nz * camDir.z;
-
-        // Only render faces pointing toward camera
-        // System.out.println(dot);
-        if(ts.type != 2){
-            if (dot < 0) continue;
-        }
-
         totalTris+=1;
-        vec2 v1 = t.v1.project(cam, camYaw, camPitch,getWidth(),getHeight());
-        vec2 v2 = t.v2.project(cam, camYaw, camPitch,getWidth(),getHeight());
-        vec2 v3 = t.v3.project(cam, camYaw, camPitch,getWidth(),getHeight());
+        vec2 v1 = t.v1.project(cam, camYaw, camPitch, getWidth(), getHeight());
+        vec2 v2 = t.v2.project(cam, camYaw, camPitch, getWidth(), getHeight());
+        vec2 v3 = t.v3.project(cam, camYaw, camPitch, getWidth(), getHeight());
 
         if (Double.isNaN(v1.x) || Double.isNaN(v2.x) || Double.isNaN(v3.x)) continue;
 
@@ -204,6 +202,7 @@ protected void paintComponent(Graphics g) {
 
         for (int y = minY; y <= maxY; y++) {
             for (int x = minX; x <= maxX; x++) {
+
                 double[] bary = computeBarycentric(xPoints[0], yPoints[0], xPoints[1], yPoints[1], xPoints[2], yPoints[2], x, y);
                 double l1 = bary[0], l2 = bary[1], l3 = bary[2];
 
@@ -214,42 +213,43 @@ protected void paintComponent(Graphics g) {
                     nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
                     ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
                     nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
-                    
+
                     double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
                     if (len > 0.0001) {
                         nx /= len;
                         ny /= len;
                         nz /= len;
                     }
-                    if (ts.type == 2) {
-                        nx = -nx;
-                        ny = -ny;
-                        nz = -nz;
-                    }
-                    dot = nx * lightDir.x + ny * lightDir.y + nz * lightDir.z;
-                    float intensity;
-                    if (dot > 0.95) intensity = 1.0f;
-                    else if (dot > 0.5) intensity = 0.6f;
-                    else intensity = 0.3f;
 
+                    double i = ((nx * lightDir.x) + (ny * lightDir.y) + (nz * lightDir.z));
+                    
                     int texX = (int)(Math.max(0, Math.min(1, u)) * texture.getWidth());
                     int texY = (int)(Math.max(0, Math.min(1, v)) * texture.getHeight());
+
 
                   
                     if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
                         int rgb = texture.getRGB(texX, texY);
-                        Color texColor = new Color(rgb);
+                        Color texColor = new Color(rgb,true);
                       
-                      
-                            int r = (int)(texColor.getRed() * intensity);
-                            int g = (int)(texColor.getGreen() * intensity);
-                            int b = (int)(texColor.getBlue() * intensity);
+                        
+                            int r = (int)(texColor.getRed() * i);
+                            int g = (int)(texColor.getGreen() * i);
+                            int b = (int)(texColor.getBlue() * i);
                             
                             r = Math.max(0, Math.min(255, r));
                             g = Math.max(0, Math.min(255, g));
                             b = Math.max(0, Math.min(255, b));
-                            
-                            g2d.setColor(new Color(r, g, b));
+                            int a = texColor.getAlpha();
+                             g2d.setColor(new Color(r, g, b, a)); 
+                             if(debug)  {
+                                if((nz+ny+nx)/3<0.3){
+                                    g2d.setColor(new Color(255,0,0,100));
+                             }
+                             if((nz+ny+nx)/3>0.3){
+                                    g2d.setColor(new Color(0,255,0,100));
+                             }
+                            }
                         
                         g2d.fillRect(x, y, 1, 1);
                     }
@@ -258,7 +258,6 @@ protected void paintComponent(Graphics g) {
         }
     }
 }
-
 private int clamp(int val) {
     return Math.max(0, Math.min(255, val));
 }
