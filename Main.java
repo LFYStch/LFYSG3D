@@ -243,10 +243,10 @@ protected void paintComponent(Graphics g) {
                             int a = texColor.getAlpha();
                              g2d.setColor(new Color(r, g, b, a)); 
                              if(debug)  {
-                                if((nz+ny+nx)/3<0.3){
+                                f((nz+ny+nx)<0){
                                     g2d.setColor(new Color(255,0,0,100));
                              }
-                             if((nz+ny+nx)/3>0.3){
+                             if((nz+ny+nx)>0){
                                     g2d.setColor(new Color(0,255,0,100));
                              }
                             }
