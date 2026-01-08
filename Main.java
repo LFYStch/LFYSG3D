@@ -133,7 +133,7 @@ protected void paintComponent(Graphics g) {
     }
     //No edits past here! >:(
     
-   public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
+ public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
     if(ts.type == 1){
         tri t = ts.tris[0][0]; 
         if(t.v1.z<cam.z) return;
@@ -178,10 +178,10 @@ protected void paintComponent(Graphics g) {
                 0, 0
             );
             // Dot product determines if face is visible
-            if(ts.type!=2){
+           
                 double dot = nx * camDir.x  + nz * camDir.z;
-                if (dot < 0) continue;
-            }
+                if(!debug) {if (dot > 0 ) continue;}
+            
 
             
         
@@ -221,7 +221,7 @@ protected void paintComponent(Graphics g) {
                         nz /= len;
                     }
 
-                    double i = ((nx * lightDir.x) + (ny * lightDir.y) + (nz * lightDir.z));
+                    double i = -((nx * lightDir.x) + (ny * lightDir.y) + (nz * lightDir.z));
                     
                     int texX = (int)(Math.max(0, Math.min(1, u)) * texture.getWidth());
                     int texY = (int)(Math.max(0, Math.min(1, v)) * texture.getHeight());
@@ -243,10 +243,10 @@ protected void paintComponent(Graphics g) {
                             int a = texColor.getAlpha();
                              g2d.setColor(new Color(r, g, b, a)); 
                              if(debug)  {
-                                f((nz+ny+nx)<0){
+                                if(dot>0){
                                     g2d.setColor(new Color(255,0,0,100));
                              }
-                             if((nz+ny+nx)>0){
+                             if(dot<0){
                                     g2d.setColor(new Color(0,255,0,100));
                              }
                             }
@@ -258,6 +258,7 @@ protected void paintComponent(Graphics g) {
         }
     }
 }
+
 private int clamp(int val) {
     return Math.max(0, Math.min(255, val));
 }
