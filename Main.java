@@ -59,7 +59,7 @@ class dP extends JPanel {
     int totalTris;
     boolean debug = false;
     BufferedImage texture1;
-    spawner sp;
+
     KeyFrame ArmAnim;
     GameObject shoulder,UPA,LRA;
     float alpha = 0.5f;
@@ -76,34 +76,34 @@ class dP extends JPanel {
         camYaw = 0;
         camPitch = 0;
         loadTextures();
-        sp = new spawner();
-        shoulder = new GameObject(new mesh[]{loader.load("Cube.obj",0,0,20,0.25,0.5,0.5)},0,0,0,0,0,null);
-        UPA = new GameObject(new mesh[]{loader.load("Cube.obj",0,10,20,0.25,0.5,0.5)},0,0,0,0,0,shoulder);
-        LRA = new GameObject(new mesh[]{loader.load("Cube.obj",0,20,20,0.25,0.5,0.5)},0,0,0,0,0,UPA);
+      
+        shoulder = new GameObject(new mesh[]{loader.load("Cube.obj",0,0,20,0.25,0.5,0.5,0)},0,0,0,0,0,0,null);
+        UPA = new GameObject(new mesh[]{loader.load("Cube.obj",0,10,20,0.25,0.5,0.5,0)},0,0,0,0,0,0,shoulder);
+        LRA = new GameObject(new mesh[]{loader.load("Cube.obj",0,20,20,0.25,0.5,0.5,0)},0,0,0,0,0,0,UPA);
         ArmAnim = this.makeArm();
     }
     public KeyFrame makeArm() {  
-        vec3[][] animPaths = new vec3[3][];
-        animPaths[0] = new vec3[]{
+        vec6[][] animPaths = new vec6[3][];
+        animPaths[0] = new vec6[]{
            
-            new vec3(0, 0, 20, 0, 0),                     
-            new vec3(0, 0, 20, 0, Math.toRadians(10)),     
-            new vec3(0, 0, 20, 0, Math.toRadians(-10))                    
+            new vec6(0, 0, 20, 0, 0, 0),                     
+            new vec6(0, 0, 20, 0, 0, Math.toRadians(10)),     
+            new vec6(0, 0, 20, 0,0, Math.toRadians(-10))                    
                             
     };
     
-    animPaths[1] = new vec3[]{
+    animPaths[1] = new vec6[]{
        
-        new vec3(0, 10, 20, 0, 0),             
-        new vec3(0, -3, 20, 0, Math.toRadians(45)),     
-        new vec3(0, -3, 20, 0, Math.toRadians(-45))                  
+        new vec6(0, 10, 20, 0, 0, 0),             
+        new vec6(0, -3, 20, 0,0, Math.toRadians(45)),     
+        new vec6(0, -3, 20, 0,0, Math.toRadians(-45))                  
     };
     
-    animPaths[2] = new vec3[]{
+    animPaths[2] = new vec6[]{
         
-        new vec3(0, 10, 20, 0, 0),               
-        new vec3(0, -7, 20, 0, Math.toRadians(45)),     
-        new vec3(0, -7, 20, 0, Math.toRadians(-45))                    
+        new vec6(0, 10, 20, 0,0, 0),               
+        new vec6(0, -7, 20, 0,0, Math.toRadians(45)),     
+        new vec6(0, -7, 20, 0,0, Math.toRadians(-45))                    
     };
     
         KeyFrame kf = new KeyFrame(new GameObject[]{shoulder, UPA, LRA}, animPaths);
@@ -382,18 +382,19 @@ class AABB {
 }
 }
 
-  class GameObject {
+class GameObject {
     mesh[] anims;
     GameObject parent;
 
     double lx, ly, lz;
-    double ry, rz;
+    double ry, rz, rx;
 
     public GameObject(mesh[] anims,
-                      double ry, double rz,
+                      double ry, double rz,double rx,
                       double lx, double ly, double lz,
                       GameObject parent) {
         this.anims = anims;
+        this.rx = rx;
         this.ry = ry;
         this.rz = rz;
         this.lx = lx;
@@ -441,7 +442,7 @@ class AABB {
                 );
             }
         }
-        return new mesh(out);
+        return new mesh(out, 0);
     }
 
     private vec3 apply(vec3 v, Transform t) {
@@ -464,18 +465,22 @@ class AABB {
         double nnx = v.nx;
         double nny = v.ny;
         double nnz = v.nz;
-        
+
         // yaw rotation
         double nnx1 = nnx * Math.cos(t.ry) - nnz * Math.sin(t.ry);
         double nnz1 = nnx * Math.sin(t.ry) + nnz * Math.cos(t.ry);
-        
+
         // pitch rotation
         double nnx2 = nnx1 * Math.cos(t.rz) - nny * Math.sin(t.rz);
         double nny2 = nnx1 * Math.sin(t.rz) + nny * Math.cos(t.rz);
-        
+
+        //x rot
+        double nny3 = nny2 * Math.cos(t.rx) - nnz1 * Math.sin(t.rx);
+        double nnz2 = nny2 * Math.sin(t.rx) + nnz1 * Math.cos(t.rx);
+
         o.nx = nnx2;
-        o.ny = nny2;
-        o.nz = nnz1;
+        o.ny = nny3;
+        o.nz = nnz2;
 
         return o;
     }
@@ -483,7 +488,7 @@ class AABB {
 
 class Transform {
     double x, y, z;
-    double ry, rz;
+    double ry, rz,rx;
 
     Transform(double x, double y, double z, double ry, double rz) {
         this.x = x;
@@ -491,18 +496,29 @@ class Transform {
         this.z = z;
         this.ry = ry;
         this.rz = rz;
+        this.rx = rx;
     }
 }
 
 
 class Objloader {
-    public mesh load(String path, double offsetX, double offsetY, double offsetZ,double sizex,double sizez,double sizey) {
+    public static InputStream loadResource(String path) {
+    InputStream in = Main.class.getResourceAsStream("/" + path);
+    if (in == null) {
+        System.out.println("OBJ not found: " + path);
+    }
+    return in;
+}
+
+    public mesh load(String path, double offsetX, double offsetY, double offsetZ,double sizex,double sizez,double sizey, int t) {
         java.util.List<vec3> vertices = new java.util.ArrayList<>();
         java.util.List<vec2> uvs = new java.util.ArrayList<>();
         java.util.List<vec3> normals = new java.util.ArrayList<>();
         java.util.List<tri> triangles = new java.util.ArrayList<>();
+        InputStream in = loadResource(path);
 
-        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(in));
+) {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] parts = line.trim().split("\\s+");
@@ -568,7 +584,18 @@ class Objloader {
             System.err.println("OBJ load failed: " + e.getMessage());
         }
 
-        return new mesh(new tri[][] { triangles.toArray(new tri[0]) }, 0);
+        return new mesh(new tri[][] { triangles.toArray(new tri[0]) }, t);
+    }
+}
+class vec6{
+    double x,y,z,t,h,p;
+    public vec6(double x,double y,double z,double px, double py,double pz){
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.t = px;
+        this.h = py;
+        this.p = pz;
     }
 }
 class KeyFrame {
@@ -576,23 +603,24 @@ class KeyFrame {
         return a + (b - a) * t;
     }
     
-    public vec3 lerpVec3(vec3 a, vec3 b, double t) {
-        return new vec3(
+    public vec6 lerpVec6(vec6 a, vec6 b, double t) {
+        return new vec6(
             lerp(a.x, b.x, t),
             lerp(a.y, b.y, t),
             lerp(a.z, b.z, t),
-            lerp(a.u, b.u, t),
-            lerp(a.v, b.v, t)
+            lerp(a.t, b.t, t),
+            lerp(a.h, b.h, t),
+            lerp(a.p, b.p, t)
         );
     }
     
     GameObject[] KEY; 
-    vec3[][] AnimIndexforAnim; 
+    vec6[][] AnimIndexforAnim; 
     private double animationTime = 0;
     private int currentFrame = 0;
     private boolean looping = true;
     private double frameDuration = 0.5; 
-    public KeyFrame(GameObject[] KEY, vec3[][] AnimIndexforAnim) {
+    public KeyFrame(GameObject[] KEY, vec6[][] AnimIndexforAnim) {
         this.KEY = KEY;
         this.AnimIndexforAnim = AnimIndexforAnim;
     }
@@ -628,19 +656,19 @@ class KeyFrame {
         
     private void animateObject(int objectIndex, int currentFrame, int nextFrame, double t) {
         
-        vec3 currentPos = AnimIndexforAnim[objectIndex][currentFrame];
-        vec3 nextPos = AnimIndexforAnim[objectIndex][nextFrame];
+        vec6 currentPos = AnimIndexforAnim[objectIndex][currentFrame];
+        vec6 nextPos = AnimIndexforAnim[objectIndex][nextFrame];
         
         
-        vec3 newPos = lerpVec3(currentPos, nextPos, t);
+        vec6 newPos = lerpVec6(currentPos, nextPos, t);
         
        
         GameObject obj = KEY[objectIndex];
         obj.lx = newPos.x;
         obj.ly = newPos.y;
         obj.lz = newPos.z;
-        obj.ry = newPos.u;
-        obj.rz = newPos.v;
+        obj.ry = newPos.t;
+        obj.rz = newPos.h;
     }
     
     public void reset() {
