@@ -405,7 +405,7 @@ class GameObject {
 
     private Transform world() {
     if (parent == null) {
-        return new Transform(lx, ly, lz, ry, rz);
+        return new Transform(lx, ly, lz, ry, rz, rx);
     }
 
     Transform p = parent.world();
@@ -417,12 +417,16 @@ class GameObject {
     double offZ = lx * sinY + lz * cosY;
 
     return new Transform(
+        
         p.x + offX,
         p.y + ly,
         p.z + offZ,
         p.ry + ry,
-        p.rz + this.rz 
+        p.rz + this.rz,
+        p.rx + this.rx
     );
+
+
 }
 
 
@@ -451,36 +455,51 @@ class GameObject {
         double z = v.z;
 
         double x1 = x * Math.cos(t.ry) - z * Math.sin(t.ry);
-        double z1 = x * Math.sin(t.ry) + z * Math.cos(t.ry);
+         double z1 = x * Math.sin(t.ry) + z * Math.cos(t.ry);
+         double y1 = y;
 
-        double x2 = x1 * Math.cos(t.rz) - y * Math.sin(t.rz);
-        double y2 = x1 * Math.sin(t.rz) + y * Math.cos(t.rz);
+        double x2 = x1 * Math.cos(t.rz) - y1 * Math.sin(t.rz);
+         double y2 = x1 * Math.sin(t.rz) + y1 * Math.cos(t.rz);
+         double z2 = z1;
+
+        // X rotation
+        double y3 = y2 * Math.cos(t.rx) - z2 * Math.sin(t.rx);
+         double z3 = y2 * Math.sin(t.rx) + z2 * Math.cos(t.rx);
+         double x3 = x2;
+
 
         vec3 o = v.copy();
-        o.x = x2 + t.x;
-        o.y = y2 + t.y;
-        o.z = z1 + t.z;
+        o.x = x3 + t.x;
+        o.y = y3 + t.y;
+        o.z = z3 + t.z;
 
+
+        
         // rotate normal
-        double nnx = v.nx;
-        double nny = v.ny;
-        double nnz = v.nz;
+        double nx = v.nx;
+        double ny = v.ny;
+        double nz = v.nz;
 
-        // yaw rotation
-        double nnx1 = nnx * Math.cos(t.ry) - nnz * Math.sin(t.ry);
-        double nnz1 = nnx * Math.sin(t.ry) + nnz * Math.cos(t.ry);
+        // --- YAW (Y axis) ---
+        double nx1 = nx * Math.cos(t.ry) - nz * Math.sin(t.ry);
+        double nz1 = nx * Math.sin(t.ry) + nz * Math.cos(t.ry);
+        double ny1 = ny;
 
-        // pitch rotation
-        double nnx2 = nnx1 * Math.cos(t.rz) - nny * Math.sin(t.rz);
-        double nny2 = nnx1 * Math.sin(t.rz) + nny * Math.cos(t.rz);
+        // --- PITCH (Z axis) ---
+        double nx2 = nx1 * Math.cos(t.rz) - ny1 * Math.sin(t.rz);
+        double ny2 = nx1 * Math.sin(t.rz) + ny1 * Math.cos(t.rz);
+        double nz2 = nz1;
 
-        //x rot
-        double nny3 = nny2 * Math.cos(t.rx) - nnz1 * Math.sin(t.rx);
-        double nnz2 = nny2 * Math.sin(t.rx) + nnz1 * Math.cos(t.rx);
+        // --- ROLL (X axis) ---
+        double ny3 = ny2 * Math.cos(t.rx) - nz2 * Math.sin(t.rx);
+        double nz3 = ny2 * Math.sin(t.rx) + nz2 * Math.cos(t.rx);
+        double nx3 = nx2;
 
-        o.nx = nnx2;
-        o.ny = nny3;
-        o.nz = nnz2;
+        o.nx = nx3;
+        o.ny = ny3;
+        o.nz = nz3;
+
+     
 
         return o;
     }
@@ -490,14 +509,15 @@ class Transform {
     double x, y, z;
     double ry, rz,rx;
 
-    Transform(double x, double y, double z, double ry, double rz) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.ry = ry;
-        this.rz = rz;
-        this.rx = rx;
-    }
+    Transform(double x, double y, double z, double ry, double rz, double rx) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    this.ry = ry;
+    this.rz = rz;
+    this.rx = rx;
+}
+
 }
 
 
@@ -669,6 +689,7 @@ class KeyFrame {
         obj.lz = newPos.z;
         obj.ry = newPos.t;
         obj.rz = newPos.h;
+        obj.rx = newPos.p;
     }
     
     public void reset() {
