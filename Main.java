@@ -50,7 +50,8 @@ public class Main implements KeyListener {
 
 class dP extends JPanel {
     
-    
+    BufferedImage buffer = new BufferedImage(500, 500, BufferedImage.TYPE_INT_ARGB);
+    int[] fb = ((DataBufferInt)buffer.getRaster().getDataBuffer()).getData();
     public int deltaTime;
     public Graphics2D g2d;
     vec3 cam;
@@ -126,10 +127,13 @@ class dP extends JPanel {
 protected void paintComponent(Graphics g) {
     super.paintComponent(g);
     g2d = (Graphics2D) g;
+    g2d.drawImage(buffer, 0, 0, null);
+     Arrays.fill(fb, 0x00000000);
     ArmAnim.runAnimation(0.1);
     drawMesh(shoulder.getMesh(0),g2d,texture1);
     drawMesh(UPA.getMesh(0),g2d,texture1);
     drawMesh(LRA.getMesh(0),g2d,texture1);
+    g2d.drawImage(buffer,0,0,null);
     }
     //No edits past here! >:(
     
