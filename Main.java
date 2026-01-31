@@ -72,7 +72,9 @@ class dP extends JPanel {
     public dP() {
         setDoubleBuffered(true);
         cam = new vec3(0, 0, -30, 0, 0);
-        cam.nx = cam.x + Math.cos(camYaw);cam.ny = cam.y + Math.cos(camPitch);cam.nz = cam.z + Math.sin(camYaw) + 10;
+        cam.nx = Math.sin(camYaw);
+        cam.ny = Math.sin(camPitch);
+        cam.nz = Math.cos(camYaw);
         light_source1 = new vec3(cam.x, cam.y, cam.z - 2, 0, 0);
         camYaw = 0;
         camPitch = 0;
@@ -138,130 +140,129 @@ protected void paintComponent(Graphics g) {
     //No edits past here! >:(
     
  public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
-    if(ts.type == 1){
-        tri t = ts.tris[0][0]; 
-        if(t.v1.z<cam.z) return;
+    if (ts.type == 1) {
+        tri t = ts.tris[0][0];
+        double depth = t.v1.z - cam.z;
+        if (depth <= 0) return;
+
         vec2 p1 = t.v1.project(cam, camYaw, camPitch, getWidth(), getHeight());
         vec2 p3 = t.v3.project(cam, camYaw, camPitch, getWidth(), getHeight());
 
-        int sx = (int)p1.x;
-        int sy = (int)p1.y;
-        int sw = (int)(p3.x - p1.x);
-        int sh = (int)(p3.y - p1.y);
-        
+        int sx = (int) p1.x;
+        int sy = (int) p1.y;
+        int sw = (int) (p3.x - p1.x);
+        int sh = (int) (p3.y - p1.y);
+
         g2d.drawImage(texture, sx, sy, sw, sh, null);
-        
         return;
     }
+
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
-        Collections.addAll(sortedTris, strip);
+        java.util.Collections.addAll(sortedTris, strip);
     }
-    
-    // Sort triangles by average Z depth (back-to-front)
+
     sortedTris.sort((a, b) -> {
         double za = (a.v1.z + a.v2.z + a.v3.z) / 3.0;
         double zb = (b.v1.z + b.v2.z + b.v3.z) / 3.0;
         return Double.compare(zb, za);
     });
 
-    vec3 lightDir = new vec3(0,0,1,0, 0);
+    vec3 lightDir = new vec3(0, 0, 1, 0, 0);
+
+    int screenW = getWidth();
+    int screenH = getHeight();
+    int texW = texture.getWidth();
+    int texH = texture.getHeight();
 
     for (tri t : sortedTris) {
         double nx = (t.v1.nx + t.v2.nx + t.v3.nx) / 3.0;
         double ny = (t.v1.ny + t.v2.ny + t.v3.ny) / 3.0;
         double nz = (t.v1.nz + t.v2.nz + t.v3.nz) / 3.0;
 
-        // Calculate vector from camera to face center
-        
-           
-            vec3 camDir = new vec3(
-                Math.sin(camYaw),
-                Math.sin(camPitch),
-                Math.cos(camYaw),
-                0, 0
-            );
-            // Dot product determines if face is visible
-           
-                double dot = nx * camDir.x  + nz * camDir.z;
-                if(!debug) {if (dot > 0 ) continue;}
-            
+        double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (len > 0.0001) {
+            nx /= len;
+            ny /= len;
+            nz /= len;
+        }
 
-            
-        
-        totalTris+=1;
-        vec2 v1 = t.v1.project(cam, camYaw, camPitch, getWidth(), getHeight());
-        vec2 v2 = t.v2.project(cam, camYaw, camPitch, getWidth(), getHeight());
-        vec2 v3 = t.v3.project(cam, camYaw, camPitch, getWidth(), getHeight());
+        vec3 camDir = new vec3(Math.sin(camYaw), Math.sin(camPitch), Math.cos(camYaw), 0, 0);
+        double dot = nx * camDir.x + nz * camDir.z;
+        if (!debug && dot > 0) continue;
+
+        double li = -((nx * lightDir.x) + (ny * lightDir.y) + (nz * lightDir.z));
+        if (li < 0) li = 0;
+        if (li > 1) li = 1;
+
+        totalTris++;
+
+        vec2 v1 = t.v1.project(cam, camYaw, camPitch, screenW, screenH);
+        vec2 v2 = t.v2.project(cam, camYaw, camPitch, screenW, screenH);
+        vec2 v3 = t.v3.project(cam, camYaw, camPitch, screenW, screenH);
 
         if (Double.isNaN(v1.x) || Double.isNaN(v2.x) || Double.isNaN(v3.x)) continue;
 
-        int[] xPoints = { (int) v1.x, (int) v2.x, (int) v3.x };
-        int[] yPoints = { (int) v1.y, (int) v2.y, (int) v3.y };
+        int x1 = (int) v1.x;
+        int y1 = (int) v1.y;
+        int x2 = (int) v2.x;
+        int y2 = (int) v2.y;
+        int x3 = (int) v3.x;
+        int y3 = (int) v3.y;
 
-        int minX = Math.max(0, Math.min(xPoints[0], Math.min(xPoints[1], xPoints[2])));
-        int maxX = Math.min(getWidth() - 1, Math.max(xPoints[0], Math.max(xPoints[1], xPoints[2])));
-        int minY = Math.max(0, Math.min(yPoints[0], Math.min(yPoints[1], yPoints[2])));
-        int maxY = Math.min(getHeight() - 1, Math.max(yPoints[0], Math.max(yPoints[1], yPoints[2])));
+        int minX = Math.max(0, Math.min(x1, Math.min(x2, x3)));
+        int maxX = Math.min(screenW - 1, Math.max(x1, Math.max(x2, x3)));
+        int minY = Math.max(0, Math.min(y1, Math.min(y2, y3)));
+        int maxY = Math.min(screenH - 1, Math.max(y1, Math.max(y2, y3)));
+
+        if (minX >= maxX || minY >= maxY) continue;
 
         for (int y = minY; y <= maxY; y++) {
+            int rowIndex = y * screenW;
             for (int x = minX; x <= maxX; x++) {
+                double[] bary = computeBarycentric(
+                        x1, y1,
+                        x2, y2,
+                        x3, y3,
+                        x, y
+                );
 
-                double[] bary = computeBarycentric(xPoints[0], yPoints[0], xPoints[1], yPoints[1], xPoints[2], yPoints[2], x, y);
                 double l1 = bary[0], l2 = bary[1], l3 = bary[2];
+                if (l1 < 0 || l2 < 0 || l3 < 0) continue;
 
-                if (l1 >= 0 && l2 >= 0 && l3 >= 0) {
-                    double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
-                    double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
+                double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
+                double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
 
-                    nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
-                    ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
-                    nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
+                if (u < 0) u = 0;
+                if (u > 1) u = 1;
+                if (v < 0) v = 0;
+                if (v > 1) v = 1;
 
-                    double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-                    if (len > 0.0001) {
-                        nx /= len;
-                        ny /= len;
-                        nz /= len;
-                    }
+                int texX = (int) (u * (texW - 1));
+                int texY = (int) (v * (texH - 1));
 
-                    double i = -((nx * lightDir.x) + (ny * lightDir.y) + (nz * lightDir.z));
-                    
-                    int texX = (int)(Math.max(0, Math.min(1, u)) * texture.getWidth());
-                    int texY = (int)(Math.max(0, Math.min(1, v)) * texture.getHeight());
+                int rgb = texture.getRGB(texX, texY);
+                int a = (rgb >>> 24) & 0xFF;
+                if (a == 0) continue;
 
+                int r = (rgb >>> 16) & 0xFF;
+                int g = (rgb >>> 8) & 0xFF;
+                int b = rgb & 0xFF;
 
-                  
-                    if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
-                        int rgb = texture.getRGB(texX, texY);
-                        Color texColor = new Color(rgb,true);
-                      
-                        
-                            int r = (int)(texColor.getRed() * i);
-                            int g = (int)(texColor.getGreen() * i);
-                            int b = (int)(texColor.getBlue() * i);
-                            
-                            r = Math.max(0, Math.min(255, r));
-                            g = Math.max(0, Math.min(255, g));
-                            b = Math.max(0, Math.min(255, b));
-                            int a = texColor.getAlpha();
-                             g2d.setColor(new Color(r, g, b, a)); 
-                             if(debug)  {
-                                if(dot>0){
-                                    g2d.setColor(new Color(255,0,0,100));
-                             }
-                             if(dot<0){
-                                    g2d.setColor(new Color(0,255,0,100));
-                             }
-                            }
-                        
-                        g2d.fillRect(x, y, 1, 1);
-                    }
-                }
+                r = (int) (r * li);
+                g = (int) (g * li);
+                b = (int) (b * li);
+
+                if (r < 0) r = 0; else if (r > 255) r = 255;
+                if (g < 0) g = 0; else if (g > 255) g = 255;
+                if (b < 0) b = 0; else if (b > 255) b = 255;
+
+                fb[rowIndex + x] = (a << 24) | (r << 16) | (g << 8) | b;
             }
         }
     }
 }
+
 
 private int clamp(int val) {
     return Math.max(0, Math.min(255, val));
@@ -313,9 +314,9 @@ class vec3 {
     double nX = this.x - cam.x;
     double nY = this.y - cam.y;
     double nZ = this.z - cam.z;
-    double dot  = (cam.nx * nX) + (cam.ny * nY) + (cam.nz * nZ);
-
-    if (dot <= 0.9) { // Point is in front of camera
+    double dot = cam.nx * nX + cam.ny * nY + cam.nz * nZ;
+if (dot <= 0) return new vec2(Double.NaN, Double.NaN);
+ // Point is in front of camera
         double rotX = nX * Math.cos(yaw) - nZ * Math.sin(yaw);
         double rotZ = nX * Math.sin(yaw) + nZ * Math.cos(yaw);
         double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
@@ -326,10 +327,9 @@ class vec3 {
         double screenCenterY = screenHeight / 2.0;
 
         return new vec2(rotX * scale + screenCenterX, finalY * scale + screenCenterY);
-    } else {
-        return new vec2(Double.NaN, Double.NaN);
+    
     }
-}
+
 }
 
 class vec2 {
