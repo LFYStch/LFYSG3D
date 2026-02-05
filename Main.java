@@ -386,17 +386,15 @@ class AABB {
 }
 }
 
-class GameObject {
+
+  class GameObject {
+    
     mesh[] anims;
     GameObject parent;
-
     double lx, ly, lz;
     double ry, rz, rx;
-
-    public GameObject(mesh[] anims,
-                      double ry, double rz,double rx,
-                      double lx, double ly, double lz,
-                      GameObject parent) {
+    public double px=0,py=0,pz=0;
+    public GameObject(mesh[] anims, double ry, double rz, double rx, double lx, double ly, double lz, GameObject parent) {
         this.anims = anims;
         this.rx = rx;
         this.ry = ry;
@@ -407,94 +405,85 @@ class GameObject {
         this.parent = parent;
     }
 
-    private Transform world() {
-    if (parent == null) {
-        return new Transform(lx, ly, lz, ry, rz, rx);
+    public Transform world() {
+        if (parent == null) {
+            return new Transform(lx, ly, lz, ry, rz, rx);
+        }
+
+        Transform p = parent.world();
+        double cosY = Math.cos(p.ry);
+        double sinY = Math.sin(p.ry);
+
+        double offX = lx * cosY - lz * sinY;
+        double offZ = lx * sinY + lz * cosY;
+
+        return new Transform(
+                p.x + offX,
+                p.y + ly,
+                p.z + offZ,
+                p.ry + ry,
+                p.rz + this.rz,
+                p.rx + this.rx
+        );
     }
-
-    Transform p = parent.world();
-
-    double cosY = Math.cos(p.ry);
-    double sinY = Math.sin(p.ry);
-
-    double offX = lx * cosY - lz * sinY;
-    double offZ = lx * sinY + lz * cosY;
-
-    return new Transform(
-        
-        p.x + offX,
-        p.y + ly,
-        p.z + offZ,
-        p.ry + ry,
-        p.rz + this.rz,
-        p.rx + this.rx
-    );
-
-
-}
-
 
     public mesh getMesh(int i) {
         mesh src = anims[i];
         Transform t = world();
 
         tri[][] out = new tri[src.tris.length][];
+
         for (int r = 0; r < src.tris.length; r++) {
             out[r] = new tri[src.tris[r].length];
             for (int c = 0; c < src.tris[r].length; c++) {
                 tri tr = src.tris[r][c];
                 out[r][c] = new tri(
-                    apply(tr.v1, t),
-                    apply(tr.v2, t),
-                    apply(tr.v3, t)
+                        apply(tr.v1, t),
+                        apply(tr.v2, t),
+                        apply(tr.v3, t)
                 );
             }
         }
+
         return new mesh(out, 0);
     }
 
     private vec3 apply(vec3 v, Transform t) {
-        double x = v.x;
-        double y = v.y;
-        double z = v.z;
+        double x = v.x - px;
+        double y = v.y - py;
+        double z = v.z - pz;
 
         double x1 = x * Math.cos(t.ry) - z * Math.sin(t.ry);
-         double z1 = x * Math.sin(t.ry) + z * Math.cos(t.ry);
-         double y1 = y;
+        double z1 = x * Math.sin(t.ry) + z * Math.cos(t.ry);
+        double y1 = y;
 
         double x2 = x1 * Math.cos(t.rz) - y1 * Math.sin(t.rz);
-         double y2 = x1 * Math.sin(t.rz) + y1 * Math.cos(t.rz);
-         double z2 = z1;
+        double y2 = x1 * Math.sin(t.rz) + y1 * Math.cos(t.rz);
+        double z2 = z1;
 
-        // X rotation
         double y3 = y2 * Math.cos(t.rx) - z2 * Math.sin(t.rx);
-         double z3 = y2 * Math.sin(t.rx) + z2 * Math.cos(t.rx);
-         double x3 = x2;
-
-
+        double z3 = y2 * Math.sin(t.rx) + z2 * Math.cos(t.rx);
+        double x3 = x2;
+        x3+=px;
+        y3+=py;
+        z3+=pz;
         vec3 o = v.copy();
         o.x = x3 + t.x;
         o.y = y3 + t.y;
         o.z = z3 + t.z;
 
-
-        
-        // rotate normal
         double nx = v.nx;
         double ny = v.ny;
         double nz = v.nz;
 
-        // --- YAW (Y axis) ---
         double nx1 = nx * Math.cos(t.ry) - nz * Math.sin(t.ry);
         double nz1 = nx * Math.sin(t.ry) + nz * Math.cos(t.ry);
         double ny1 = ny;
 
-        // --- PITCH (Z axis) ---
         double nx2 = nx1 * Math.cos(t.rz) - ny1 * Math.sin(t.rz);
         double ny2 = nx1 * Math.sin(t.rz) + ny1 * Math.cos(t.rz);
         double nz2 = nz1;
 
-        // --- ROLL (X axis) ---
         double ny3 = ny2 * Math.cos(t.rx) - nz2 * Math.sin(t.rx);
         double nz3 = ny2 * Math.sin(t.rx) + nz2 * Math.cos(t.rx);
         double nx3 = nx2;
@@ -503,12 +492,9 @@ class GameObject {
         o.ny = ny3;
         o.nz = nz3;
 
-     
-
         return o;
     }
 }
-
 class Transform {
     double x, y, z;
     double ry, rz,rx;
