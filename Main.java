@@ -71,46 +71,70 @@ class dP extends JPanel {
 
     public dP() {
         setDoubleBuffered(true);
-        cam = new vec3(0, 0, -30, 0, 0);
-        cam.nx = cam.x + Math.cos(camYaw);cam.ny = cam.y + Math.cos(camPitch);cam.nz = cam.z + Math.sin(camYaw) + 10;
+        cam = new vec3(0, 0, 15, 0, 0);
+        cam.nx = Math.cos(camYaw);cam.ny = Math.cos(camPitch);cam.nz = Math.sin(camYaw);
         light_source1 = new vec3(cam.x, cam.y, cam.z - 2, 0, 0);
         camYaw = 0;
         camPitch = 0;
         loadTextures();
       
-        shoulder = new GameObject(new mesh[]{loader.load("Cube.obj",0,0,20,0.25,0.5,0.5,0)},0,0,0,0,0,0,null);
-        UPA = new GameObject(new mesh[]{loader.load("Cube.obj",0,10,20,0.25,0.5,0.5,0)},0,0,0,0,0,0,shoulder);
-        LRA = new GameObject(new mesh[]{loader.load("Cube.obj",0,20,20,0.25,0.5,0.5,0)},0,0,0,0,0,0,UPA);
+        shoulder = new GameObject(
+    new mesh[]{loader.load("cube.obj",0,0,0,1,1,1,0)},
+    0,0,0,   // rotation
+    0,0,20,  // local position
+    null
+);
+
+UPA = new GameObject(
+    new mesh[]{loader.load("cube.obj",0,0,0,1,1,1,0)},
+    0,0,0,
+    10,0,0,  // offset from shoulder
+    shoulder
+);
+
+LRA = new GameObject(
+    new mesh[]{loader.load("cube.obj",0,0,0,1,1,1,0)},
+    0,0,0,
+    10,0,0,  // offset from UPA
+    UPA
+);
+
+        shoulder.px = 0; shoulder.py = 0; shoulder.pz = 0;
+
+    UPA.px = 0; UPA.py = -5; UPA.pz = 0;   // pivot at top of upper arm
+    LRA.px = 0; LRA.py = -5; LRA.pz = 0;   // pivot at top of lower arm
+
         ArmAnim = this.makeArm();
     }
-    public KeyFrame makeArm() {  
-        vec6[][] animPaths = new vec6[3][];
-        animPaths[0] = new vec6[]{
-           
-            new vec6(0, 0, 20, 0, 0, 0),                     
-            new vec6(0, 0, 20, 0, 0, Math.toRadians(10)),     
-            new vec6(0, 0, 20, 0,0, Math.toRadians(-10))                    
-                            
+  public KeyFrame makeArm() {
+    vec6[][] animPaths = new vec6[3][];
+
+    // SHOULDER — rotate 90° around Z
+    animPaths[0] = new vec6[]{
+        new vec6(0, 0, 20, 0, 0, 0),
+        new vec6(0, 0, 20, 0, 0, 0),
+        new vec6(0, 0, 20, 0, 0, 0)
     };
-    
+    // UPPER ARM — rotate 90° around Z
     animPaths[1] = new vec6[]{
-       
-        new vec6(0, 10, 20, 0, 0, 0),             
-        new vec6(0, -3, 20, 0,0, Math.toRadians(45)),     
-        new vec6(0, -3, 20, 0,0, Math.toRadians(-45))                  
+        new vec6(0, 0, 0, 0, 0, 0),
+        new vec6(0, -0.5, 0, 0, 0,Math.toRadians(30)),
+        new vec6(0, 0, 0, 0,0, 0)
     };
     
+    // LOWER ARM — rotate 90° around Z
     animPaths[2] = new vec6[]{
-        
-        new vec6(0, 10, 20, 0,0, 0),               
-        new vec6(0, -7, 20, 0,0, Math.toRadians(45)),     
-        new vec6(0, -7, 20, 0,0, Math.toRadians(-45))                    
+        new vec6(0, 0, 0, 0,0, 0),
+        new vec6(0, -0.5, 0, 0,0, Math.toRadians(30)),
+        new vec6(0, 0, 0, 0, 0,0)
     };
-    
-        KeyFrame kf = new KeyFrame(new GameObject[]{shoulder, UPA, LRA}, animPaths);
-        kf.setFrameDuration(0.4);
-        return kf;
-    }
+
+    KeyFrame kf = new KeyFrame(new GameObject[]{shoulder, UPA, LRA}, animPaths);
+    kf.setFrameDuration(1.0);
+    return kf;
+}
+
+
     public void loadTextures() {
         try {
             texture1 = ImageIO.read(new File("dir.png"));
@@ -129,10 +153,12 @@ protected void paintComponent(Graphics g) {
     g2d = (Graphics2D) g;
     g2d.drawImage(buffer, 0, 0, null);
      Arrays.fill(fb, 0x00000000);
-    ArmAnim.runAnimation(0.1);
-    drawMesh(shoulder.getMesh(0),g2d,texture1);
-    drawMesh(UPA.getMesh(0),g2d,texture1);
-    drawMesh(LRA.getMesh(0),g2d,texture1);
+        ArmAnim.runAnimation(0.1);
+        drawMesh(shoulder.getMesh(0),g2d,texture1);
+        drawMesh(UPA.getMesh(0),g2d,texture1);
+        drawMesh(LRA.getMesh(0),g2d,texture1);
+        //drawMesh(loader.load("Cube.obj",0,0,16,1,1,1,0),g2d,texture1);
+        //drawMesh(loader.load("Cube.obj",10,0,16,1,1,1,0),g2d,texture1);
     g2d.drawImage(buffer,0,0,null);
     }
     //No edits past here! >:(
@@ -387,14 +413,37 @@ class AABB {
 }
 
 
-  class GameObject {
-    
+  class Transform {
+    double x, y, z;
+    double rx, ry, rz;
+
+    Transform(double x, double y, double z, double rx, double ry, double rz) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.rx = rx;
+        this.ry = ry;
+        this.rz = rz;
+    }
+}
+
+class GameObject {
+
     mesh[] anims;
     GameObject parent;
+
+    // local position
     double lx, ly, lz;
-    double ry, rz, rx;
-    public double px=0,py=0,pz=0;
-    public GameObject(mesh[] anims, double ry, double rz, double rx, double lx, double ly, double lz, GameObject parent) {
+
+    // local rotation
+    double rx, ry, rz;
+
+    // pivot
+    double px = 0, py = 0, pz = 0;
+
+    public GameObject(mesh[] anims, double ry, double rz, double rx,
+                      double lx, double ly, double lz, GameObject parent) {
+
         this.anims = anims;
         this.rx = rx;
         this.ry = ry;
@@ -405,28 +454,32 @@ class AABB {
         this.parent = parent;
     }
 
+    // ---------------------------
+    // CORRECT WORLD TRANSFORM
+    // ---------------------------
     public Transform world() {
         if (parent == null) {
-            return new Transform(lx, ly, lz, ry, rz, rx);
+            return new Transform(lx, ly, lz, rx, ry, rz);
         }
 
         Transform p = parent.world();
-        double cosY = Math.cos(p.ry);
-        double sinY = Math.sin(p.ry);
 
-        double offX = lx * cosY - lz * sinY;
-        double offZ = lx * sinY + lz * cosY;
+        // rotate local offset by parent rotation
+        double[] off = rotateXYZ(lx, ly, lz, p.rx, p.ry, p.rz);
 
         return new Transform(
-                p.x + offX,
-                p.y + ly,
-                p.z + offZ,
-                p.ry + ry,
-                p.rz + this.rz,
-                p.rx + this.rx
+            p.x + off[0],
+            p.y + off[1],
+            p.z + off[2],
+            p.rx + rx,
+            p.ry + ry,
+            p.rz + rz
         );
     }
 
+    // ---------------------------
+    // APPLY TRANSFORM TO VERTEX
+    // ---------------------------
     public mesh getMesh(int i) {
         mesh src = anims[i];
         Transform t = world();
@@ -438,9 +491,9 @@ class AABB {
             for (int c = 0; c < src.tris[r].length; c++) {
                 tri tr = src.tris[r][c];
                 out[r][c] = new tri(
-                        apply(tr.v1, t),
-                        apply(tr.v2, t),
-                        apply(tr.v3, t)
+                    apply(tr.v1, t),
+                    apply(tr.v2, t),
+                    apply(tr.v3, t)
                 );
             }
         }
@@ -449,65 +502,58 @@ class AABB {
     }
 
     private vec3 apply(vec3 v, Transform t) {
+
+        // move to pivot
         double x = v.x - px;
         double y = v.y - py;
         double z = v.z - pz;
 
-        double x1 = x * Math.cos(t.ry) - z * Math.sin(t.ry);
-        double z1 = x * Math.sin(t.ry) + z * Math.cos(t.ry);
-        double y1 = y;
+        // rotate around local axes
+        double[] r1 = rotateXYZ(x, y, z, t.rx, t.ry, t.rz);
 
-        double x2 = x1 * Math.cos(t.rz) - y1 * Math.sin(t.rz);
-        double y2 = x1 * Math.sin(t.rz) + y1 * Math.cos(t.rz);
-        double z2 = z1;
+        // move back from pivot
+        double fx = r1[0] + px;
+        double fy = r1[1] + py;
+        double fz = r1[2] + pz;
 
-        double y3 = y2 * Math.cos(t.rx) - z2 * Math.sin(t.rx);
-        double z3 = y2 * Math.sin(t.rx) + z2 * Math.cos(t.rx);
-        double x3 = x2;
-        x3+=px;
-        y3+=py;
-        z3+=pz;
+        // apply world translation
         vec3 o = v.copy();
-        o.x = x3 + t.x;
-        o.y = y3 + t.y;
-        o.z = z3 + t.z;
+        o.x = fx + t.x;
+        o.y = fy + t.y;
+        o.z = fz + t.z;
 
-        double nx = v.nx;
-        double ny = v.ny;
-        double nz = v.nz;
-
-        double nx1 = nx * Math.cos(t.ry) - nz * Math.sin(t.ry);
-        double nz1 = nx * Math.sin(t.ry) + nz * Math.cos(t.ry);
-        double ny1 = ny;
-
-        double nx2 = nx1 * Math.cos(t.rz) - ny1 * Math.sin(t.rz);
-        double ny2 = nx1 * Math.sin(t.rz) + ny1 * Math.cos(t.rz);
-        double nz2 = nz1;
-
-        double ny3 = ny2 * Math.cos(t.rx) - nz2 * Math.sin(t.rx);
-        double nz3 = ny2 * Math.sin(t.rx) + nz2 * Math.cos(t.rx);
-        double nx3 = nx2;
-
-        o.nx = nx3;
-        o.ny = ny3;
-        o.nz = nz3;
+        // rotate normals too
+        double[] n = rotateXYZ(v.nx, v.ny, v.nz, t.rx, t.ry, t.rz);
+        o.nx = n[0];
+        o.ny = n[1];
+        o.nz = n[2];
 
         return o;
     }
-}
-class Transform {
-    double x, y, z;
-    double ry, rz,rx;
 
-    Transform(double x, double y, double z, double ry, double rz, double rx) {
-    this.x = x;
-    this.y = y;
-    this.z = z;
-    this.ry = ry;
-    this.rz = rz;
-    this.rx = rx;
-}
+    // ---------------------------
+    // CORRECT ROTATION ORDER
+    // X → Y → Z
+    // ---------------------------
+    private double[] rotateXYZ(double x, double y, double z, double rx, double ry, double rz) {
 
+        // rotate X
+        double cx = Math.cos(rx), sx = Math.sin(rx);
+        double y1 = y * cx - z * sx;
+        double z1 = y * sx + z * cx;
+
+        // rotate Y
+        double cy = Math.cos(ry), sy = Math.sin(ry);
+        double x2 = x * cy + z1 * sy;
+        double z2 = -x * sy + z1 * cy;
+
+        // rotate Z
+        double cz = Math.cos(rz), sz = Math.sin(rz);
+        double x3 = x2 * cz - y1 * sz;
+        double y3 = x2 * sz + y1 * cz;
+
+        return new double[]{x3, y3, z2};
+    }
 }
 
 
@@ -677,9 +723,9 @@ class KeyFrame {
         obj.lx = newPos.x;
         obj.ly = newPos.y;
         obj.lz = newPos.z;
-        obj.ry = newPos.t;
-        obj.rz = newPos.h;
-        obj.rx = newPos.p;
+        obj.rx = newPos.t;
+        obj.ry = newPos.h;
+        obj.rz = newPos.p;
     }
     
     public void reset() {
