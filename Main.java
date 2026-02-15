@@ -49,7 +49,7 @@ public class Main implements KeyListener {
 }
 
 class dP extends JPanel {
-    
+     double[] zbuf;
     BufferedImage buffer = new BufferedImage(500, 500, BufferedImage.TYPE_INT_ARGB);
     int[] fb = ((DataBufferInt)buffer.getRaster().getDataBuffer()).getData();
     public int deltaTime;
@@ -134,17 +134,49 @@ LRA = new GameObject(
     return kf;
 }
 
+ public static BufferedImage loadImage(String path) {
+    try (InputStream in = Main.class.getResourceAsStream("/" + path)) {
+        if (in == null) return null;
 
-    public void loadTextures() {
-        try {
-            texture1 = ImageIO.read(new File("dir.png"));
-            
-        } catch (IOException e) {
-            System.err.println("Texture load failed.");
-            e.printStackTrace();
+        BufferedImage img = ImageIO.read(in);
+
+        if (img.getType() != BufferedImage.TYPE_INT_ARGB) {
+            BufferedImage converted = new BufferedImage(
+                img.getWidth(),
+                img.getHeight(),
+                BufferedImage.TYPE_INT_ARGB
+            );
+            Graphics2D g = converted.createGraphics();
+            g.drawImage(img, 0, 0, null);
+            g.dispose();
+            return converted;
         }
+
+        return img;
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        return null;
     }
-    
+}
+    public void loadTextures() {
+        
+            texture1 = loadImage("dir.png");
+       
+    }
+    vec3 sub(vec3 a, vec3 b) {
+    return new vec3(a.x - b.x, a.y - b.y, a.z - b.z, 0, 0);
+}
+
+vec3 cross(vec3 a, vec3 b) {
+    return new vec3(
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x,
+        0, 0
+    );
+}
+
     
     //Main drawloop starts here! :)
     @Override
@@ -152,146 +184,189 @@ protected void paintComponent(Graphics g) {
     super.paintComponent(g);
     g2d = (Graphics2D) g;
     g2d.drawImage(buffer, 0, 0, null);
-     Arrays.fill(fb, 0x00000000);
+        if (buffer.getWidth() != getWidth() || buffer.getHeight() != getHeight()) {
+            buffer = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
+            fb = ((DataBufferInt)buffer.getRaster().getDataBuffer()).getData();
+            zbuf = new double[getWidth()*getHeight()];
+        }
+      
+            Arrays.fill(fb, 0x00000000);
+            Arrays.fill(zbuf, Double.POSITIVE_INFINITY);
+          
+
         ArmAnim.runAnimation(0.1);
         drawMesh(shoulder.getMesh(0),g2d,texture1);
         drawMesh(UPA.getMesh(0),g2d,texture1);
         drawMesh(LRA.getMesh(0),g2d,texture1);
         //drawMesh(loader.load("Cube.obj",0,0,16,1,1,1,0),g2d,texture1);
         //drawMesh(loader.load("Cube.obj",10,0,16,1,1,1,0),g2d,texture1);
-    g2d.drawImage(buffer,0,0,null);
+    g2d.drawImage(buffer, 0, 0, null);
     }
     //No edits past here! >:(
     
  public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
-    if(ts.type == 1){
-        tri t = ts.tris[0][0]; 
-        if(t.v1.z<cam.z) return;
+        int[] tex = ((DataBufferInt)texture.getRaster().getDataBuffer()).getData();
+        /*
+    if (ts.type == 1) {
+        tri t = ts.tris[0][0];
+        double depth = t.v1.z - cam.z;
+        if (depth <= 0) return;
+
         vec2 p1 = t.v1.project(cam, camYaw, camPitch, getWidth(), getHeight());
         vec2 p3 = t.v3.project(cam, camYaw, camPitch, getWidth(), getHeight());
 
-        int sx = (int)p1.x;
-        int sy = (int)p1.y;
-        int sw = (int)(p3.x - p1.x);
-        int sh = (int)(p3.y - p1.y);
-        
+        int sx = (int) p1.x;
+        int sy = (int) p1.y;
+        int sw = (int) (p3.x - p1.x);
+        int sh = (int) (p3.y - p1.y);
+
         g2d.drawImage(texture, sx, sy, sw, sh, null);
-        
         return;
     }
+*/
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
-        Collections.addAll(sortedTris, strip);
+        java.util.Collections.addAll(sortedTris, strip);
     }
-    
-    // Sort triangles by average Z depth (back-to-front)
+
     sortedTris.sort((a, b) -> {
         double za = (a.v1.z + a.v2.z + a.v3.z) / 3.0;
         double zb = (b.v1.z + b.v2.z + b.v3.z) / 3.0;
         return Double.compare(zb, za);
     });
 
-    vec3 lightDir = new vec3(0,0,1,0, 0);
+   vec3 lightDir = new vec3(Math.sin(camYaw), 1, Math.cos(camYaw),0,0);
+
+        double len = Math.sqrt(lightDir.x*lightDir.x + lightDir.y*lightDir.y + lightDir.z*lightDir.z);
+        lightDir.x /= len;
+        lightDir.y /= len;
+        lightDir.z /= len;
+
+    int screenW = getWidth();
+    int screenH = getHeight();
+    int texW = texture.getWidth();
+    int texH = texture.getHeight();
 
     for (tri t : sortedTris) {
         double nx = (t.v1.nx + t.v2.nx + t.v3.nx) / 3.0;
         double ny = (t.v1.ny + t.v2.ny + t.v3.ny) / 3.0;
         double nz = (t.v1.nz + t.v2.nz + t.v3.nz) / 3.0;
 
-        // Calculate vector from camera to face center
-        
-           
-            vec3 camDir = new vec3(
-                Math.sin(camYaw),
-                Math.sin(camPitch),
-                Math.cos(camYaw),
-                0, 0
-            );
-            // Dot product determines if face is visible
-           
-                double dot = nx * camDir.x  + nz * camDir.z;
-                if(!debug) {if (dot > 0 ) continue;}
-            
+        len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (len > 0.0001) {
+            nx /= len;
+            ny /= len;
+            nz /= len;
+        }
+       
+         vec3 e1 = sub(t.v2, t.v1);
+        vec3 e2 = sub(t.v3, t.v1);
+        vec3 N = cross(e1, e2);
 
-            
+        double view = (t.v1.x - cam.x) * N.x +
+                    (t.v1.y - cam.y) * N.y +
+                    (t.v1.z - cam.z) * N.z;
+
+        if(ts.type!=1) if (view > 0) continue;
+      
+
+        double li = -(((nx * lightDir.x) + (ny * lightDir.y) + (nz * lightDir.z)));
         
-        totalTris+=1;
-        vec2 v1 = t.v1.project(cam, camYaw, camPitch, getWidth(), getHeight());
-        vec2 v2 = t.v2.project(cam, camYaw, camPitch, getWidth(), getHeight());
-        vec2 v3 = t.v3.project(cam, camYaw, camPitch, getWidth(), getHeight());
+        if(ts.type==1){
+            li=1;
+        }
+        totalTris++;
+
+        vec2 v1 = t.v1.project(cam, camYaw, camPitch, screenW, screenH);
+        vec2 v2 = t.v2.project(cam, camYaw, camPitch, screenW, screenH);
+        vec2 v3 = t.v3.project(cam, camYaw, camPitch, screenW, screenH);
 
         if (Double.isNaN(v1.x) || Double.isNaN(v2.x) || Double.isNaN(v3.x)) continue;
 
-        int[] xPoints = { (int) v1.x, (int) v2.x, (int) v3.x };
-        int[] yPoints = { (int) v1.y, (int) v2.y, (int) v3.y };
+        int x1 = (int) v1.x;
+        int y1 = (int) v1.y;
+        int x2 = (int) v2.x;
+        int y2 = (int) v2.y;
+        int x3 = (int) v3.x;
+        int y3 = (int) v3.y;
 
-        int minX = Math.max(0, Math.min(xPoints[0], Math.min(xPoints[1], xPoints[2])));
-        int maxX = Math.min(getWidth() - 1, Math.max(xPoints[0], Math.max(xPoints[1], xPoints[2])));
-        int minY = Math.max(0, Math.min(yPoints[0], Math.min(yPoints[1], yPoints[2])));
-        int maxY = Math.min(getHeight() - 1, Math.max(yPoints[0], Math.max(yPoints[1], yPoints[2])));
+        int minX = Math.max(0, Math.min(x1, Math.min(x2, x3)));
+        int maxX = Math.min(screenW - 1, Math.max(x1, Math.max(x2, x3)));
+        int minY = Math.max(0, Math.min(y1, Math.min(y2, y3)));
+        int maxY = Math.min(screenH - 1, Math.max(y1, Math.max(y2, y3)));
+
+        if (minX >= maxX || minY >= maxY) continue;
 
         for (int y = minY; y <= maxY; y++) {
+            int rowIndex = y * screenW;
             for (int x = minX; x <= maxX; x++) {
+               float PX = x;
+                float PY = y;
 
-                double[] bary = computeBarycentric(xPoints[0], yPoints[0], xPoints[1], yPoints[1], xPoints[2], yPoints[2], x, y);
-                double l1 = bary[0], l2 = bary[1], l3 = bary[2];
+                float X1 = x1, Y1 = y1;
+                float X2 = x2, Y2 = y2;
+                float X3 = x3, Y3 = y3;
 
-                if (l1 >= 0 && l2 >= 0 && l3 >= 0) {
-                    double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
-                    double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
+                float denom = (Y2 - Y3)*(X1 - X3) + (X3 - X2)*(Y1 - Y3);
+                if (denom == 0) continue;
 
-                    nx = l1 * t.v1.nx + l2 * t.v2.nx + l3 * t.v3.nx;
-                    ny = l1 * t.v1.ny + l2 * t.v2.ny + l3 * t.v3.ny;
-                    nz = l1 * t.v1.nz + l2 * t.v2.nz + l3 * t.v3.nz;
+                float l1 = ((Y2 - Y3)*(PX - X3) + (X3 - X2)*(PY - Y3)) / denom;
+                if (l1 < 0) continue;
 
-                    double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-                    if (len > 0.0001) {
-                        nx /= len;
-                        ny /= len;
-                        nz /= len;
-                    }
+                float l2 = ((Y3 - Y1)*(PX - X3) + (X1 - X3)*(PY - Y3)) / denom;
+                if (l2 < 0) continue;
 
-                    double i = -((nx * lightDir.x) + (ny * lightDir.y) + (nz * lightDir.z));
-                    
-                    int texX = (int)(Math.max(0, Math.min(1, u)) * texture.getWidth());
-                    int texY = (int)(Math.max(0, Math.min(1, v)) * texture.getHeight());
+                float l3 = 1 - l1 - l2;
+                if (l3 < 0) continue;
 
 
-                  
-                    if (texX >= 0 && texX < texture.getWidth() && texY >= 0 && texY < texture.getHeight()) {
-                        int rgb = texture.getRGB(texX, texY);
-                        Color texColor = new Color(rgb,true);
-                      
-                        
-                            int r = (int)(texColor.getRed() * i);
-                            int g = (int)(texColor.getGreen() * i);
-                            int b = (int)(texColor.getBlue() * i);
-                            
-                            r = Math.max(0, Math.min(255, r));
-                            g = Math.max(0, Math.min(255, g));
-                            b = Math.max(0, Math.min(255, b));
-                            int a = texColor.getAlpha();
-                             g2d.setColor(new Color(r, g, b, a)); 
-                             if(debug)  {
-                                if(dot>0){
-                                    g2d.setColor(new Color(255,0,0,100));
-                             }
-                             if(dot<0){
-                                    g2d.setColor(new Color(0,255,0,100));
-                             }
-                            }
-                        
-                        g2d.fillRect(x, y, 1, 1);
-                    }
-                }
+                double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
+                double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
+
+                if (u < 0) u = 0;
+                if (u > 1) u = 1;
+                if (v < 0) v = 0;
+                if (v > 1) v = 1;
+
+                int texX = (int) (u * (texW - 1));
+                int texY = (int) (v * (texH - 1));
+
+int rgb = tex[texY * texW + texX];
+
+                int a = (rgb >>> 24) & 0xFF;
+                if (a == 0) continue;
+
+                int r = (rgb >>> 16) & 0xFF;
+                int g = (rgb >>> 8) & 0xFF;
+                int b = rgb & 0xFF;
+
+                r = (int) (r * li);
+                g = (int) (g * li);
+                b = (int) (b * li);
+
+                if (r < 0) r = 0; else if (r > 255) r = 255;
+                if (g < 0) g = 0; else if (g > 255) g = 255;
+                if (b < 0) b = 0; else if (b > 255) b = 255;
+
+                double z = l1 * t.v1.z + l2 * t.v2.z + l3 * t.v3.z;
+int idx = rowIndex + x;
+               
+               
+        if (z < zbuf[idx] && ts.type!=3) {
+            zbuf[idx] = z;
+            
+                fb[idx] = (a << 24) | (r << 16) | (g << 8) | b;
+            
             }
+            else{
+                fb[y*screenW+x] = fb[idx] = (a << 24) | (r << 16) | (g << 8) | b;
+            }
+        
         }
+    }
     }
 }
 
-private int clamp(int val) {
-    return Math.max(0, Math.min(255, val));
-}
 
 
 
