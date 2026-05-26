@@ -182,14 +182,7 @@ vec3 cross(vec3 a, vec3 b) {
     @Override
 protected void paintComponent(Graphics g) {
     super.paintComponent(g);
-    g2d = (Graphics2D) g;
-    g2d.drawImage(buffer, 0, 0, null);
-        if (buffer.getWidth() != getWidth() || buffer.getHeight() != getHeight()) {
-            buffer = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
-            fb = ((DataBufferInt)buffer.getRaster().getDataBuffer()).getData();
-            zbuf = new double[getWidth()*getHeight()];
-        }
-      
+    g2d = (Graphics2D) g;  
             Arrays.fill(fb, 0x00000000);
             Arrays.fill(zbuf, Double.POSITIVE_INFINITY);
           
@@ -200,7 +193,7 @@ protected void paintComponent(Graphics g) {
         drawMesh(LRA.getMesh(0),g2d,texture1);
         //drawMesh(loader.load("Cube.obj",0,0,16,1,1,1,0),g2d,texture1);
         //drawMesh(loader.load("Cube.obj",10,0,16,1,1,1,0),g2d,texture1);
-    g2d.drawImage(buffer, 0, 0, null);
+    g2d.drawImage(buffer, 0, 0, getWidth(), getHeight(), null);
     }
     //No edits past here! >:(
     
