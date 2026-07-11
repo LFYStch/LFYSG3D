@@ -22,8 +22,25 @@ public class Main implements KeyListener {
         w.add(d);
         w.setVisible(true);
         w.addKeyListener(this);
+        public static Object gameLock = new Object();
+        update = new Thread(() -> {
+            final long frameTime = 16_666_666;
 
-        new javax.swing.Timer(50, e -> d.update()).start();
+            while (running) {
+                long start = System.nanoTime();
+
+                synchronized (gameLock) {
+                    d.update(this);
+                }
+
+                while (System.nanoTime() - start < frameTime) {
+                    Thread.yield();
+                }
+            }
+        });
+
+        update.setDaemon(true);
+        update.start();
     }
 
     @Override
@@ -50,7 +67,7 @@ public class Main implements KeyListener {
 
 class dP extends JPanel {
      double[] zbuf;
-    BufferedImage buffer = new BufferedImage(500, 500, BufferedImage.TYPE_INT_ARGB);
+    BufferedImage buffer = new BufferedImage(320, 240, BufferedImage.TYPE_INT_ARGB);
     int[] fb = ((DataBufferInt)buffer.getRaster().getDataBuffer()).getData();
     public int deltaTime;
     public Graphics2D g2d;
@@ -176,74 +193,113 @@ vec3 cross(vec3 a, vec3 b) {
         0, 0
     );
 }
+public static void applyDither(int[] fb, int w, int h) {
 
-    
+    // 4×4 Bayer matrix scaled to 0–7 (PS1 used 3-bit dither)
+    final int[] BAYER = {
+         0, 4, 1, 5,
+         6, 2, 7, 3,
+         1, 5, 0, 4,
+         7, 3, 6, 2
+    };
+
+    int idx = 0;
+
+    for (int y = 0; y < h; y++) {
+        int by = (y & 3) << 2; // (y % 4) * 4
+
+        for (int x = 0; x < w; x++, idx++) {
+            if ((fb[idx] >>> 24) != 0xFF) continue; // skip UI
+
+         int c = fb[idx];
+
+            int r = (c >> 16) & 0xFF;
+            int g = (c >>  8) & 0xFF;
+            int b =  c        & 0xFF;
+
+            int t = BAYER[by | (x & 3)]; // threshold 0–7
+
+            // Add dither BEFORE truncation (PS1 behavior)
+            r = (r + t) >> 3;  // convert to 5-bit
+            g = (g + t) >> 3;
+            b = (b + t) >> 3;
+
+            // Expand back to 8-bit
+            fb[idx] = 0xFF000000 |
+                     ((r << 3) << 16) |
+                     ((g << 3) << 8)  |
+                     (b << 3);
+        }
+    }
+}
+
+
     //Main drawloop starts here! :)
     @Override
 protected void paintComponent(Graphics g) {
     super.paintComponent(g);
     g2d = (Graphics2D) g;  
-            Arrays.fill(fb, 0x00000000);
-            Arrays.fill(zbuf, Double.POSITIVE_INFINITY);
+    
+        synchronized(Main.gameLock){
           
 
         ArmAnim.runAnimation(0.1);
         drawMesh(shoulder.getMesh(0),g2d,texture1);
-        drawMesh(UPA.getMesh(0),g2d,texture1);
-        drawMesh(LRA.getMesh(0),g2d,texture1);
+        drawMesh(UPA.getMesh(0),texture1);
+        drawMesh(LRA.getMesh(0),texture1);
         //drawMesh(loader.load("Cube.obj",0,0,16,1,1,1,0),g2d,texture1);
         //drawMesh(loader.load("Cube.obj",10,0,16,1,1,1,0),g2d,texture1);
+    applyDither(fb, 320,240);
     g2d.drawImage(buffer, 0, 0, getWidth(), getHeight(), null);
+        }
     }
     //No edits past here! >:(
     
- public void drawMesh(mesh ts, Graphics2D g2d, BufferedImage texture) {
+public void drawMesh(mesh ts, BufferedImage texture) {
+       
         int[] tex = ((DataBufferInt)texture.getRaster().getDataBuffer()).getData();
-        /*
-    if (ts.type == 1) {
-        tri t = ts.tris[0][0];
-        double depth = t.v1.z - cam.z;
-        if (depth <= 0) return;
-
-        vec2 p1 = t.v1.project(cam, camYaw, camPitch, getWidth(), getHeight());
-        vec2 p3 = t.v3.project(cam, camYaw, camPitch, getWidth(), getHeight());
-
-        int sx = (int) p1.x;
-        int sy = (int) p1.y;
-        int sw = (int) (p3.x - p1.x);
-        int sh = (int) (p3.y - p1.y);
-
-        g2d.drawImage(texture, sx, sy, sw, sh, null);
-        return;
-    }
-*/
+       
+       
     java.util.List<tri> sortedTris = new java.util.ArrayList<>();
     for (tri[] strip : ts.tris) {
         java.util.Collections.addAll(sortedTris, strip);
     }
 
-    sortedTris.sort((a, b) -> {
-        double za = (a.v1.z + a.v2.z + a.v3.z) / 3.0;
-        double zb = (b.v1.z + b.v2.z + b.v3.z) / 3.0;
-        return Double.compare(zb, za);
-    });
-
-   vec3 lightDir = new vec3(Math.sin(camYaw), 1, Math.cos(camYaw),0,0);
+     // In drawMesh(), before sorting:
+for (tri t : sortedTris) {
+    //t.frustumNearCull(new vec3(Math.sin(camYaw)*cam.x,0,Math.cos(camYaw)*cam.z,0,0));
+    t.v1.project(cam, camYaw, camPitch, 1, 1); // dummy screen size
+    t.v2.project(cam, camYaw, camPitch, 1, 1);
+    t.v3.project(cam, camYaw, camPitch, 1, 1);
+}
+    
+   vec3 lightDir = new vec3(Math.sin(camYaw), 0.5, Math.cos(camYaw),0,0);
 
         double len = Math.sqrt(lightDir.x*lightDir.x + lightDir.y*lightDir.y + lightDir.z*lightDir.z);
         lightDir.x /= len;
         lightDir.y /= len;
         lightDir.z /= len;
 
-    int screenW = getWidth();
-    int screenH = getHeight();
+    int screenW = 320;
+    int screenH = 240;
     int texW = texture.getWidth();
     int texH = texture.getHeight();
-
+    
     for (tri t : sortedTris) {
+        /* 
+        t.v1.u = clamp(t.v1.u,0,1);
+        t.v1.v = clamp(t.v1.v,0,1);
+        t.v2.u = clamp(t.v2.u,0,1);
+        t.v2.v = clamp(t.v2.v,0,1);
+        t.v3.u = clamp(t.v3.u,0,1);
+        t.v3.v = clamp(t.v3.v,0,1);                
+        */
+       
         double nx = (t.v1.nx + t.v2.nx + t.v3.nx) / 3.0;
         double ny = (t.v1.ny + t.v2.ny + t.v3.ny) / 3.0;
         double nz = (t.v1.nz + t.v2.nz + t.v3.nz) / 3.0;
+        double li = -(nx*lightDir.x + ny*lightDir.y + nz*lightDir.z);
+    li = clamp(li, 0.3, 1.0);
 
         len = Math.sqrt(nx * nx + ny * ny + nz * nz);
         if (len > 0.0001) {
@@ -252,28 +308,21 @@ protected void paintComponent(Graphics g) {
             nz /= len;
         }
        
-         vec3 e1 = sub(t.v2, t.v1);
-        vec3 e2 = sub(t.v3, t.v1);
-        vec3 N = cross(e1, e2);
-
-        double view = (t.v1.x - cam.x) * N.x +
-                    (t.v1.y - cam.y) * N.y +
-                    (t.v1.z - cam.z) * N.z;
-
-        if(ts.type!=1) if (view > 0) continue;
-      
-
-        double li = -(((nx * lightDir.x) + (ny * lightDir.y) + (nz * lightDir.z)));
         
-        if(ts.type==1){
+        
+
+        double view = Math.sin(camYaw) * nx + Math.sin(camYaw) * ny + Math.sin(camYaw) * nz;
+        if (view == 0) continue;
+        
+        if(ts.type==1 || ts.type == 4){
             li=1;
-        }
+        } 
         totalTris++;
 
         vec2 v1 = t.v1.project(cam, camYaw, camPitch, screenW, screenH);
         vec2 v2 = t.v2.project(cam, camYaw, camPitch, screenW, screenH);
         vec2 v3 = t.v3.project(cam, camYaw, camPitch, screenW, screenH);
-
+        if (!t.frustumNearCull(0.1)) continue;
         if (Double.isNaN(v1.x) || Double.isNaN(v2.x) || Double.isNaN(v3.x)) continue;
 
         int x1 = (int) v1.x;
@@ -290,41 +339,50 @@ protected void paintComponent(Graphics g) {
 
         if (minX >= maxX || minY >= maxY) continue;
 
+        float X1 = x1, Y1 = y1;
+        float X2 = x2, Y2 = y2;
+        float X3 = x3, Y3 = y3;
+
+        float A01 = Y1 - Y2, B01 = X2 - X1;
+        float A12 = Y2 - Y3, B12 = X3 - X2;
+        float A20 = Y3 - Y1, B20 = X1 - X3;
+
+        float area = A01 * (X3 - X1) + B01 * (Y3 - Y1);
+        if (area == 0) continue;
+        float invArea = 1.0f / area;
+
+        double z1v = t.v1.depth, z2v = t.v2.depth, z3v = t.v3.depth;
+
+        double u1v = t.v1.u, u2v = t.v2.u, u3v = t.v3.u;
+        double v1v = t.v1.v, v2v = t.v2.v, v3v = t.v3.v;
+        
         for (int y = minY; y <= maxY; y++) {
             int rowIndex = y * screenW;
             for (int x = minX; x <= maxX; x++) {
-               float PX = x;
-                float PY = y;
+                float fx = x;
+                float fy = y;
 
-                float X1 = x1, Y1 = y1;
-                float X2 = x2, Y2 = y2;
-                float X3 = x3, Y3 = y3;
+                float w0 = (A12 * (fx - X2) + B12 * (fy - Y2)) * invArea;
+                float w1 = (A20 * (fx - X3) + B20 * (fy - Y3)) * invArea;
+                float w2 = 1.0f - w0 - w1;
 
-                float denom = (Y2 - Y3)*(X1 - X3) + (X3 - X2)*(Y1 - Y3);
-                if (denom == 0) continue;
+                if (w0 < 0 || w1 < 0 || w2 < 0) continue;
 
-                float l1 = ((Y2 - Y3)*(PX - X3) + (X3 - X2)*(PY - Y3)) / denom;
-                if (l1 < 0) continue;
+                int idx = rowIndex + x;
 
-                float l2 = ((Y3 - Y1)*(PX - X3) + (X1 - X3)*(PY - Y3)) / denom;
-                if (l2 < 0) continue;
+                double z = w0 * z1v + w1 * z2v + w2 * z3v;
+                if (ts.type != 3 && z > zbuf[idx]) continue;
 
-                float l3 = 1 - l1 - l2;
-                if (l3 < 0) continue;
+                double u = w0 * u1v + w1 * u2v + w2 * u3v;
+                double v = w0 * v1v + w1 * v2v + w2 * v3v;
+
+                u = clamp(u,0,1);
+                v = clamp(v,0,1);
 
 
-                double u = l1 * t.v1.u + l2 * t.v2.u + l3 * t.v3.u;
-                double v = l1 * t.v1.v + l2 * t.v2.v + l3 * t.v3.v;
-
-                if (u < 0) u = 0;
-                if (u > 1) u = 1;
-                if (v < 0) v = 0;
-                if (v > 1) v = 1;
-
-                int texX = (int) (u * (texW - 1));
-                int texY = (int) (v * (texH - 1));
-
-int rgb = tex[texY * texW + texX];
+                int texX = (int)(u * (texW - 1));
+                int texY = (int)(v * (texH - 1));
+                int rgb = tex[texY * texW + texX];
 
                 int a = (rgb >>> 24) & 0xFF;
                 if (a == 0) continue;
@@ -333,34 +391,31 @@ int rgb = tex[texY * texW + texX];
                 int g = (rgb >>> 8) & 0xFF;
                 int b = rgb & 0xFF;
 
-                r = (int) (r * li);
-                g = (int) (g * li);
-                b = (int) (b * li);
+                r = (int)(r * li);
+                g = (int)(g * li);
+                b = (int)(b * li);
 
                 if (r < 0) r = 0; else if (r > 255) r = 255;
                 if (g < 0) g = 0; else if (g > 255) g = 255;
                 if (b < 0) b = 0; else if (b > 255) b = 255;
+                
+   if(ts.type!=4)   {         
 
-                double z = l1 * t.v1.z + l2 * t.v2.z + l3 * t.v3.z;
-int idx = rowIndex + x;
-               
-               
-        if (z < zbuf[idx] && ts.type!=3) {
-            zbuf[idx] = z;
-            
-                fb[idx] = (a << 24) | (r << 16) | (g << 8) | b;
-            
+   }    
+   
+        if (z < zbuf[idx]  && ts.type!= 4) {
+            if(!t.transparent)
+                zbuf[idx] = (float)z;
+                
+                
+                if(!t.transparent){fb[idx] = (0xFF << 24) | (r << 16) | (g << 8) | b;}
             }
-            else{
-                fb[y*screenW+x] = fb[idx] = (a << 24) | (r << 16) | (g << 8) | b;
-            }
+            
         
         }
     }
     }
 }
-
-
 
 
 double[] computeBarycentric(double x1, double y1, double x2, double y2, double x3, double y3, int px, int py) {
@@ -379,18 +434,18 @@ public void update(){
         System.out.println(totalTris + " deltaTime: " + deltaTime + "\r");
     }
     totalTris = 0;
-
+    repaint();
    
 
 
 }
 }
 class vec3 {
+
     double x, y, z;
     double u, v;
-    double nx,ny,nz;
-    
-
+    double nx, ny, nz;
+    double depth;
     public vec3(double x, double y, double z, double u, double v) {
         this.x = x;
         this.y = y;
@@ -398,34 +453,29 @@ class vec3 {
         this.u = u;
         this.v = v;
     }
-    public vec3 copy() {
-    return new vec3(this.x, this.y, this.z, this.u, this.v);
-}
 
+    public vec3 copy() {
+        return new vec3(this.x, this.y, this.z, this.u, this.v);
+    }
 
     public vec2 project(vec3 cam, double yaw, double pitch, int screenWidth, int screenHeight) {
-    double nX = this.x - cam.x;
-    double nY = this.y - cam.y;
-    double nZ = this.z - cam.z;
-    double dot  = (cam.nx * nX) + (cam.ny * nY) + (cam.nz * nZ);
+        double nX = this.x - cam.x;
+        double nY = this.y - cam.y;
+        double nZ = this.z - cam.z;
 
-    if (dot <= 0.9) { // Point is in front of camera
         double rotX = nX * Math.cos(yaw) - nZ * Math.sin(yaw);
         double rotZ = nX * Math.sin(yaw) + nZ * Math.cos(yaw);
+
         double finalY = nY * Math.cos(pitch) - rotZ * Math.sin(pitch);
         double finalZ = nY * Math.sin(pitch) + rotZ * Math.cos(pitch);
-
+        this.depth = finalZ;
         double scale = 200 / Math.max(finalZ, 1.0);
         double screenCenterX = screenWidth / 2.0;
         double screenCenterY = screenHeight / 2.0;
-
+       
         return new vec2(rotX * scale + screenCenterX, finalY * scale + screenCenterY);
-    } else {
-        return new vec2(Double.NaN, Double.NaN);
     }
 }
-}
-
 class vec2 {
     double x, y;
     public vec2(double x, double y) {
@@ -435,14 +485,33 @@ class vec2 {
 }
 
 class tri {
+
     vec3 v1, v2, v3;
-    
+    boolean transparent = false;
     public tri(vec3 v1, vec3 v2, vec3 v3) {
         this.v1 = v1;
         this.v2 = v2;
         this.v3 = v3;
-        
     }
+    public boolean frustumNearCull(double nearZ) {
+
+        double d1 = v1.depth - nearZ;
+        double d2 = v2.depth - nearZ;
+        double d3 = v3.depth - nearZ;
+
+        // fully behind → cull triangle
+        if (d1 < 0 && d2 < 0 && d3 < 0) {
+            return false;
+        }
+
+        // clamp any vertex behind the near plane
+        if (d1 < 0) v1.depth = nearZ;
+        if (d2 < 0) v2.depth = nearZ;
+        if (d3 < 0) v3.depth = nearZ;
+
+        return true;
+    }
+
 }
 
 class mesh {
