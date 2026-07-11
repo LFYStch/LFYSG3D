@@ -241,12 +241,11 @@ protected void paintComponent(Graphics g) {
     g2d = (Graphics2D) g;  
     
         synchronized(Main.gameLock){
-          if (zbuf == null || zbuf.length != 320 * 240)
-    zbuf = new double[320 * 240];
+          if (zbuf == null || zbuf.length != 320*240)
+            zbuf = new double[320*240];
 
-Arrays.fill(zbuf, Double.POSITIVE_INFINITY);
-Arrays.fill(fb, 0); // clear framebuffer to black
-
+        Arrays.fill(zbuf, Double.POSITIVE_INFINITY);
+        Arrays.fill(fb, 0);
 
 
         ArmAnim.runAnimation(0.1);
@@ -272,7 +271,12 @@ public void drawMesh(mesh ts, BufferedImage texture) {
     }
 
      // In drawMesh(), before sorting:
-
+for (tri t : sortedTris) {
+    //t.frustumNearCull(new vec3(Math.sin(camYaw)*cam.x,0,Math.cos(camYaw)*cam.z,0,0));
+    t.v1.project(cam, camYaw, camPitch, 1, 1); // dummy screen size
+    t.v2.project(cam, camYaw, camPitch, 1, 1);
+    t.v3.project(cam, camYaw, camPitch, 1, 1);
+}
     
    vec3 lightDir = new vec3(Math.sin(camYaw), 0.5, Math.cos(camYaw),0,0);
 
@@ -372,8 +376,7 @@ public void drawMesh(mesh ts, BufferedImage texture) {
                 int idx = rowIndex + x;
 
                 double z = w0 * z1v + w1 * z2v + w2 * z3v;
-
-if (ts.type != 3 && z > zbuf[idx]) continue;
+                if (ts.type != 3 && z > zbuf[idx]) continue;
 
                 double u = w0 * u1v + w1 * u2v + w2 * u3v;
                 double v = w0 * v1v + w1 * v2v + w2 * v3v;
@@ -405,12 +408,13 @@ if (ts.type != 3 && z > zbuf[idx]) continue;
 
    }    
    
-        if (z < zbuf[idx] && ts.type != 4) {
-    if (!t.transparent) {
-        zbuf[idx] = z;
-        fb[idx] = (0xFF << 24) | (r << 16) | (g << 8) | b;
-    }
-}
+        if (z < zbuf[idx]  && ts.type!= 4) {
+            if(!t.transparent)
+                zbuf[idx] = (float)z;
+                
+                
+                if(!t.transparent){fb[idx] = (0xFF << 24) | (r << 16) | (g << 8) | b;}
+            }
             
         
         }
@@ -495,9 +499,23 @@ class tri {
         this.v3 = v3;
     }
     public boolean frustumNearCull(double nearZ) {
-    return v1.depth >= nearZ || v2.depth >= nearZ || v3.depth >= nearZ;
-}
 
+        double d1 = v1.depth - nearZ;
+        double d2 = v2.depth - nearZ;
+        double d3 = v3.depth - nearZ;
+
+        // fully behind → cull triangle
+        if (d1 < 0 && d2 < 0 && d3 < 0) {
+            return false;
+        }
+
+        // clamp any vertex behind the near plane
+        if (d1 < 0) v1.depth = nearZ;
+        if (d2 < 0) v2.depth = nearZ;
+        if (d3 < 0) v3.depth = nearZ;
+
+        return true;
+    }
 
 }
 
